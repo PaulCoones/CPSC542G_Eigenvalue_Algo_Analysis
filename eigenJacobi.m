@@ -15,53 +15,49 @@ function [D] = eigenJacobi(A)
 % Algorithm
 [n, n] = size(A);
 
-% Define a max number of iterations (k = 1000?)
-max_iter = 1000;
-tol = 1e-14; % floating point precision stops at 1e-16
+max_sweeps = 100;
+tol = 1e-15; % floating point precision stops at 1e-16
 
-% At each step:
-for k=1:max_iter
-    % Check if A is diagonal (stop if it is)
-    off = norm(A - diag(diag(A)), "fro");
+% Mentioned in TB Chapter 30. To avoid O(n^2) search, we iterate
+% over sweeps of the the off-diag elements.
+for k=1:max_sweeps
+    for j=1:n
+        for k=j:n
+            % Check if A is diagonal (stop if it is)
+            off = norm(A - diag(diag(A)), "fro");
 
-    if (off < tol)
-        break;
+            if (off < tol)
+                D = A;
+                return;
+            end
+
+            % Calculate theta for jacobi matrix
+            a_jj = A(j, j);
+            a_kk = A(k, k);
+            a_jk = A(j, k);
+        
+            if (a_jj - a_kk < tol)
+                theta = pi / 4;
+            else
+                theta = 0.5*atan((2*a_jk)/(a_kk - a_jj));
+            end
+        
+            % define Jacobi entries
+            J_diag = cos(theta);
+            J_jk = sin(theta);
+            J_kj = -sin(theta);
+        
+            J = eye(n, n);
+            J(j, j) = J_diag;
+            J(k, k) = J_diag;
+            J(j, k) = J_jk;
+            J(k, j) = J_kj;
+        
+            A = J'*A*J;
+        end
     end
-
-    % Determine the largest off-diag value of A
-
-    % A is symmetric so we only need to consider the upper half
-    B = abs(triu(A, 1)); % setting 1 discards the diagonal elements.
-    [val, idx] = max(B(:));
-    [p, q] = ind2sub(size(A), idx);
-
-    % Formulate a Jacobi Matrix to zero out the largest off-diag element.
-
-    % Calculate theta for jacobi matrix
-    a_pp = A(p, p);
-    a_qq = A(q, q);
-    a_pq = A(p, q);
-
-    if (a_pp - a_qq < tol)
-        theta = pi / 4;
-    else
-        theta = 0.5*atan((2*a_pq)/(a_qq - a_pp));
-    end
-
-    % define Jacobi entries
-    J_diag = cos(theta);
-    J_pq = sin(theta);
-    J_qp = -sin(theta);
-
-    J = eye(n, n);
-    J(p, p) = J_diag;
-    J(q, q) = J_diag;
-    J(p, q) = J_pq;
-    J(q, p) = J_qp;
-
-    A = J'*A*J;
 
 end
-
-D = A
+warning("Jacobi eigenvalue method was not able to converge for matrx")
+D = A;
 end
