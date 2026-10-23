@@ -45,7 +45,7 @@ function [D] = eigenJacobi(A)
         if (a_jj - a_kk < tol)
             theta = pi / 4;
         else
-            theta = atan((2*a_jk)/(a_jj - a_kk));
+            theta = 0.5*atan((2*a_jk)/(a_jj - a_kk));
         end
 
         % define Jacobi entries
