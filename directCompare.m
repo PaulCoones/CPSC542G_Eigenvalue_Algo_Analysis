@@ -1,81 +1,91 @@
-% Use to directly compare two algorithms on specific sets of n and L
-% values
+% FIX ME PAUL
+% FIX ME PAUL
 
+% Use to directly compare two algorithms on specific sets of
+% n and L values.
+
+% Clean workspace
 clear all;
 close all;
 
-% Inits
-n1=25;
-n2=50;
-n3=75;
-n4=100;
-n5=500;
-l1 = 1;
-l2 = 1;
-l3 = 1;
-l4 = 1;
-l5 = 1;
+% =====================================================
+% INITIALIZATION
+% =====================================================
 
-% Matrices
-Z1 = triDiag(n1,l1);
-Z2 = triDiag(n2,l2);
-Z3 = triDiag(n3,l3);
-Z4 = triDiag(n4,l4);
-Z5 = triDiag(n5,l5);
+% Test parameters (ensure length(nValues) = length(LValues)
+nValues = [25; 50; 75; 100; 500]; % Add n tests here
+LValues = [1; 1; 1; 1; 1];        % Add corresponding L values here
 
-% Init relevant eigenvalue vectors
-h1 = spacingVec(n1);
-h2 = spacingVec(n2);
-h3 = spacingVec(n3);
-h4 = spacingVec(n4);
-h5 = spacingVec(n5);
-k1 = eigenStorage(n1);
-k2 = eigenStorage(n2);
-k3 = eigenStorage(n3);
-k4 = eigenStorage(n4);
-k5 = eigenStorage(n5);
+numTests = length(nValues);
 
-% Compute exact analytical eigenvalues
-lambda1 = eigenTriExact(h1, k1, n1);
-lambda2 = eigenTriExact(h2, k2, n2);
-lambda3 = eigenTriExact(h3, k3, n3);
-lambda4 = eigenTriExact(h4, k4, n4);
-lambda5 = eigenTriExact(h5, k5, n5);
+% Algorithms to compare 
+algorithmX = @eigenBisection; % Change X to, for example, eigenParBisection or other
+algorithmY = @eigenJacobi;    % Change Y to, for example, eigenTreeBisection or other
 
-% Compare for each pair of (n, L) values
-lambdaBi1 = eigenBisection(Z1); % Change Bisection algo to X algo
-lambdaJ1 = eigenJacobi(Z1);     % Change Jacobi algo to Y algo
-errB1 = norm(lambda1 - lambdaBi1, 2)
-errJ1 = norm(lambda1 - lambdaJ1, 2)
+% Initialize error vectors
+errorX = zeros(numTests, 1);
+errorY = zeros(numTests, 1);
 
-lambdaBi2 = eigenBisection(Z2);
-lambdaJ2 = eigenJacobi(Z2);
-errB2 = norm(lambda2 - lambdaBi2, 2)
-errJ2 = norm(lambda2 - lambdaJ2, 2)
+% Initialize execution time vectors
+timeX = zeros(numTests, 1);
+timeY = zeros(numTests, 1);
 
-lambdaBi3 = eigenBisection(Z3);
-lambdaJ3 = eigenJacobi(Z3);
-errB3 = norm(lambda3 - lambdaBi3, 2)
-errJ3 = norm(lambda3 - lambdaJ3, 2)
+% =====================================================
+% COMPUTE EIGENVALUES AND ERRORS
+% =====================================================
 
-lambdaBi4 = eigenBisection(Z4);
-lambdaJ4 = eigenJacobi(Z4);
-errB4 = norm(lambda4 - lambdaBi4, 2)
-errJ4 = norm(lambda4 - lambdaJ4, 2)
+for i = 1:numTests
 
-lambdaBi5 = eigenBisection(Z5);
-lambdaJ5 = eigenJacobi(Z5);
-errB5 = norm(lambda5 - lambdaBi5, 2)
-errJ5 = norm(lambda5 - lambdaJ5, 2)
+    n = nValues(i);
+    L = LValues(i);
 
-function h = spacingVec(n)
-    h = 1/(n+1);
-end
+    % Construct tridiagonal matrix
+    Z = triDiag(n, L);
 
-function k = eigenStorage(n)
+    % Compute exact analytical eigenvalues
+    h = L/(n+1);
     k = (1:n)';
+
+    lambdaExact = (4/h^2) * ...
+        sin(k*pi/(2*(n+1))).^2;
+
+    % Compute approximate eigenvalues using Algorithm X
+    tic;
+    lambdaX = algorithmX(Z);
+    timeX(i) = toc;
+
+    % Compute approximate eigenvalues using Algorithm Y
+    tic;
+    lambdaY = algorithmY(Z);
+    timeY(i) = toc;
+
+    % Incase eigenvalues not sorted, sort eigenvalues in ascending order
+    lambdaX = sort(lambdaX(:));
+    lambdaY = sort(lambdaY(:));
+
+    % Compute 2-norm errors
+    errorX(i) = norm(lambdaExact - lambdaX, 2);
+    errorY(i) = norm(lambdaExact - lambdaY, 2);
+
 end
 
-function lambda = eigenTriExact(h, k, n) 
-    lambda = (4/h^2) * sin(k*pi/(2*(n+1))).^2;
-end
+% =====================================================
+% DISPLAY RESULTS
+% =====================================================
+
+results = table( ...
+    nValues, LValues, ...
+    errorX, errorY, timeX, timeY, ...
+    'VariableNames', ...
+    {'n', 'L', ...
+     'Error2Norm_X', 'Error2Norm_Y', ...
+     'Time_X_s', 'Time_Y_s'});
+
+fprintf('\n=== EIGENVALUE ALGORITHM COMPARISON ===\n\n');
+
+% Format n and L without scientific notation
+results.n = compose("%.2f", nValues);
+results.L = compose("%.2f", LValues);
+
+format short e
+disp(results);
