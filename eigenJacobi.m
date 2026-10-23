@@ -20,7 +20,7 @@ tol = 1e-15; % floating point precision stops at 1e-16
 
 % Mentioned in TB Chapter 30. To avoid O(n^2) search, we iterate
 % over sweeps of the the off-diag elements.
-for k=1:max_sweeps
+for kt=1:max_sweeps
     for j=1:n
         for k=j:n
             % Check if A is diagonal (stop if it is)
