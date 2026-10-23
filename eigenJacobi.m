@@ -3,7 +3,7 @@
     of a matrix A using the Jacobi eigenvalue algorithm (T.B. Chapter 30).
 %}
 
-function [D] = eigenJacobi(A)
+function [D] = eigenJacobi(A, max_sweeps, tol)
 % x = eigenBisection(A) Returns the .....
 % Requires: A is a (real?) symmetric matrix
 % Time Complexity: O(kn^3) 
@@ -12,31 +12,39 @@ function [D] = eigenJacobi(A)
 % Example input: eigenJacobi([1, 2; 2, 7])
 % Example output: 
 
-% Algorithm
-[n, n] = size(A);
+arguments
+    A 
+    max_sweeps=100
+    tol=1e-5
+end
 
-max_sweeps = 100;
-tol = 1e-15; % floating point precision stops at 1e-16
+if issparse(A)
+    A = full(A)
+end
+
+% Algorithm
+n = size(A, 1);
+%J = eye(n, n);
+
+mask = true(1, size(A, 1));
 
 % Mentioned in TB Chapter 30. To avoid O(n^2) search, we iterate
 % over sweeps of the the off-diag elements.
 for kt=1:max_sweeps
-    for j=1:n
-        for k=j:n
-            % Check if A is diagonal (stop if it is)
-            off = norm(A - diag(diag(A)), "fro");
-
-            if (off < tol)
-                D = A;
-                return;
-            end
+    % Check if A is diagonal (stop if it is)
+    off = norm(A - diag(diag(A)), "fro");
+    if (off < tol)
+        break;
+    end
+    for j=1:n-1
+        for k=j+1:n
 
             % Calculate theta for jacobi matrix
             a_jj = A(j, j);
             a_kk = A(k, k);
             a_jk = A(j, k);
         
-            if (a_jj - a_kk < tol)
+            if (a_jj == a_kk)
                 theta = pi / 4;
             else
                 theta = 0.5*atan((2*a_jk)/(a_kk - a_jj));
@@ -45,19 +53,28 @@ for kt=1:max_sweeps
             % define Jacobi entries
             J_diag = cos(theta);
             J_jk = sin(theta);
-            J_kj = -sin(theta);
+            J_kj = -J_jk;
         
-            J = eye(n, n);
-            J(j, j) = J_diag;
-            J(k, k) = J_diag;
-            J(j, k) = J_jk;
-            J(k, j) = J_kj;
-        
-            A = J'*A*J;
+            %J(j, j) = J_diag;
+            %J(k, k) = J_diag;
+            %J(j, k) = J_jk;
+            %J(k, j) = J_kj;
+            J_sub = [J_diag, J_jk; J_kj, J_diag];
+
+            % only perform matrix computation on the target rows/columns
+            A(:, [j, k]) = A(:, [j, k])*J_sub;
+            A([j, k], :) = J_sub'*A([j, k], :);
+            A(j, k) = 0;
+            A(k, j) = 0;
+            %A = J'*A*J;
+
+            % zero out elements so J goes back to identity
+            %J(j, j) = 1;
+            %J(k, k) = 1;
+            %J(j, k) = 0;
+            %   J(k, j) = 0;
         end
     end
-
 end
-warning("Jacobi eigenvalue method was not able to converge for matrx")
 D = A;
 end
