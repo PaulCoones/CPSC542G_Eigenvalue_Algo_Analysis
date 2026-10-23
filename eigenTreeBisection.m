@@ -14,7 +14,7 @@ function x = eigenTreeBisection(A, tol)
 %   due to the way in which we split intervals.
 % Requires: A is a symmetric tridiagonal square nxn matrix with n >= 1
 %           A is irreducible s.t. all its off-diagonal entries are nonzero
-%           tol is a positive number and ideally made small
+%           tol is a finite positive number and ideally made small
 % Time Complexity: O(n^2 * log_2(U - L / tol)), but better on AVERAGE
 %                  Where n is number of rows/cols in the matrix A
 %                  U and L are the upper and lower bounds on the
@@ -22,6 +22,12 @@ function x = eigenTreeBisection(A, tol)
 %                  tol is the interval length tolerance
 % Example Input: eigenTreeBisection([32,-16,0;-16,32,-16;0,-16,32], 1e-10)
 % Example Output: [9.3726, 32.0000, 54.6274]
+
+% Default arguments if none assigned
+arguments
+    A
+    tol = 1e-5
+end
 
 % Use Gershgorin's Circle Theorem to find the bounds on all eigenvalues of A
 circleCentres = diag(A);
@@ -38,47 +44,77 @@ upperBound = max(circleCentres + circleRadius);
 n = size(A, 1);
 x = zeros(n, 1); % Initialize eigenvalue vector
 
-% By construction, all n eigenvalues of A lie within [lowerBound, upperBound]
+% By Gershgorin's Theorem, all n eigenvalues of A lie within [lowerBound, upperBound]
 x = splitInterval(A, lowerBound, upperBound, 0, n, tol, x);
 
 end
 
 
 function x = splitInterval(A, L, U, countL, countU, tol, x)
-% The interval contains countU-countL eigenvalues
+% x = splitInterval(A, L, U, countL, countU, tol, x) 
+%   Returns the eigenvalues of A in increasing order, by recursively 
+%   bisecting the search interval [L, U] until an interval length tolerance 
+%   tol is reached.
+%   countL and countU contain the number of eigenvalues of A below L and U
+%   respectively.
+% Requires: A is a symmetric tridiagonal square nxn matrix with n >= 1
+%           A is irreducible s.t. all its off-diagonal entries are nonzero
+%           L is a finite positive number
+%           U is a finite positive number with U >= L
+%           tol is a finite positive number and ideally made small
+%           x is an array of size n
 
+% Default arguments if none assigned
+arguments
+    A
+    L
+    U
+    countL
+    countU
+    tol = 1e-5
+    n
+end
+
+% How many eigenvalues in the current interval
 numEigenvalues = countU - countL;
 
-% No eigenvalues in this interval
+% If none, return
 if numEigenvalues == 0
     return;
 end
+ 
 
-% Stops subdividing an interval once reached desired tolerance
+% Once interval tolerance is reached, stop dividing further
 if (U - L) <= tol
-    x(countL+1:countU) = L + (U-L)/2;
+    % Why assign countL+1:countU? It is because all remaining eigenvalues
+    % therefore are below the interval tolerance and thus seen as
+    % equivalent by the algorithm.
+    x(countL+1:countU) = L + (U-L)/2; 
     return;
 end
 
-% Otherwise, Bisect the interval
-midPoint = L + (U-L)/2;
+% Calculate midpoint after tolerance check to avoid catastrophic cancellation
+midPoint = (U - L)/2;
 
-% Prevent floating-point stagnation
-if midPoint == L || midPoint == U
-    error('Requested tolerance cannot be resolved.');
+% Otherwise, bisect the interval
+newEndpoint = L + midPoint;
+
+% If midPoint or L is below machine precision
+if newEndpoint == L || newEndpoint == U
+    error('Too small of a tolerance tol chosen');
 end
 
-% Count # of eigenvalues below the midPoint 
-countMid = sturmCounter(A, midPoint);
+% Count # of eigenvalues below the newly updated endpoint
+countNew = sturmCounter(A, newEndpoint);
 
 % Recursively work on the left interval
-if countL < countMid % There are more eigenvalues in countMid
-    x = splitInterval(A, L, midPoint, countL, countMid, tol, x); % set U = MidPoint
+if countL < countNew % There are more eigenvalues in countNew
+    x = splitInterval(A, L, newEndpoint, countL, countNew, tol, x); % set U = newEndpoint
 end
 
 % Recursively work on the right interval
-if countU > countMid % There are less eigenvalues in countMid
-    x = splitInterval(A, midPoint, U, countMid, countU, tol, x); % Set L = midPoint
+if countU > countNew % There are less eigenvalues in countNew
+    x = splitInterval(A, newEndpoint, U, countNew, countU, tol, x); % Set L = newEndpoint
 end
 
 end

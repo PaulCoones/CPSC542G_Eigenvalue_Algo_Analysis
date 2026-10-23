@@ -13,7 +13,7 @@ function x = eigenParBisection(A, tol)
 %   may be contained, however we can do better, see eigenTreeBisection.m
 % Requires: A is a symmetric tridiagonal square nxn matrix with n >= 1
 %           A is irreducible s.t. all its off-diagonal entries are nonzero
-%           tol is a positive number and ideally made small
+%           tol is a finite positive number and ideally made small
 % Time Complexity: O(n^2/p * log_2(U - L / tol))
 %                  Where n is number of rows/cols in the matrix A
 %                  p is the number of workers
@@ -22,6 +22,12 @@ function x = eigenParBisection(A, tol)
 %                  tol is the interval length tolerance
 % Example Input: eigenParBisection([32,-16,0;-16,32,-16;0,-16,32], 1e-10)
 % Example Output: [9.3726, 32.0000, 54.6274]
+
+% Default arguments if none assigned
+arguments
+    A
+    tol = 1e-5
+end
 
 % Use Gershgorin's Circle Theorem to find the bounds on all eigenvalues of A
 circleCentres = diag(A);
@@ -78,25 +84,26 @@ end
 
 end
 
-% CONSOLE TEST
+% %CONSOLE TEST
 % if isempty(gcp('nocreate'))
 %     parpool('Processes', 32);
 % end
 % 
 % Z=triDiag(7000,1);
 % 
-% % Run parallel bisection
+% %Run parallel bisection
 % tic;
-% x1 = eigenParBisection(Z, 1e-5);
+% x1 = eigenParBisection(Z);
 % elapsedTime1 = toc;
 % fprintf('Parallel execution time: %.6f seconds\n', elapsedTime1);
 % 
 % tic;
-% x2 = eigenBisection(Z, 1e-5);
+% x2 = eigenBisection(Z);
 % elapsedTime2 = toc;
 % fprintf('Naive Sequential execution time: %.6f seconds\n', elapsedTime2);
 % 
 % tic;
-% x3 = eigenTreeBisection(Z, 1e-5);
+% x3 = eigenTreeBisection(Z);
 % elapsedTime3 = toc;
 % fprintf('Good Sequential execution time: %.6f seconds\n', elapsedTime3);
+% delete(gcp('nocreate'))

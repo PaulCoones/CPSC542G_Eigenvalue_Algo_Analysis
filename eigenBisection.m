@@ -13,7 +13,7 @@ function x = eigenBisection(A, tol)
 %   may be contained, however we can do better, see eigenTreeBisection.m
 % Requires: A is a symmetric tridiagonal square nxn matrix with n >= 1
 %           A is irreducible s.t. all its off-diagonal entries are nonzero
-%           tol is a positive number and ideally made small
+%           tol is a finite positive number and ideally made small
 % Time Complexity: O(n^2 * log_2(U - L / tol))
 %                  Where n is number of rows/cols in the matrix A
 %                  U and L are the upper and lower bounds on the
@@ -21,6 +21,12 @@ function x = eigenBisection(A, tol)
 %                  tol is the interval length tolerance
 % Example Input: eigenBisection([32,-16,0;-16,32,-16;0,-16,32], 1e-10)
 % Example Output: [9.3726, 32.0000, 54.6274]
+
+% Default arguments if none assigned
+arguments
+    A
+    tol = 1e-5
+end
 
 % Use Gershgorin's Circle Theorem to find the bounds on all eigenvalues of A
 circleCentres = diag(A);
