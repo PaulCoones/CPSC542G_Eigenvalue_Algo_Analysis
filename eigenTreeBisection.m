@@ -1,20 +1,27 @@
 %{ 
-    bisection.m provides a standalone function for computing all eigenvalues
-    of a matrix A using the Bisection eigenvalue algorithm with an interval
-    decision tree.
+    eigenTreeBisection.m provides a standalone function for computing all 
+    eigenvalues of a matrix A using the Bisection eigenvalue algorithm 
+    sequentially and intelligently using an interval decision tree to avoid
+    repeated calculations like in eigenBisection.m's naive implementation.
     Reference: Trefethen & Bau's Numerical Linear Algebra Chapter 30
 %}
 
 function x = eigenTreeBisection(A, tol)
-% x = eigenBisection(A) Returns the eigenvalues of A, provided (something
-% about tol var) by counting the number of sign changes in its sturm
-% sequence .....
+% x = eigenTreeBisection(A) Returns the eigenvalues of A in increasing order, 
+%   by applying the Bisection eigenvalue algorithm for each eigenvalue 
+%   until an interval length tolerance tol is reached.
+%   This implementation is sequential, and is not trivially parallelizable
+%   due to the way in which we split intervals.
 % Requires: A is a symmetric tridiagonal square nxn matrix with n >= 1
 %           A is irreducible s.t. all its off-diagonal entries are nonzero
 %           tol is a positive number and ideally made small
-% Time Complexity: O(n^???)
-% Example input: eigenBisection([1, 2; 3, 7], 1e-10)
-% Example output: something?, compute it
+% Time Complexity: O(n^2 * log_2(U - L / tol)), but better on AVERAGE
+%                  Where n is number of rows/cols in the matrix A
+%                  U and L are the upper and lower bounds on the
+%                  eigenvalues from Gershgorin's circle theorem
+%                  tol is the interval length tolerance
+% Example Input: eigenTreeBisection([32,-16,0;-16,32,-16;0,-16,32], 1e-10)
+% Example Output: [9.3726, 32.0000, 54.6274]
 
 % Use Gershgorin's Circle Theorem to find the bounds on all eigenvalues of A
 circleCentres = diag(A);

@@ -6,8 +6,8 @@ function signCount = sturmCounter(A, shift)
 %           shift is a number
 % Time Complexity: O(n) s.t. n = size(A, 1)
 % Space Complexity: O(n) s.t. n = size(A, 1)
-% Example input: FIX ME
-% Example output: FIX ME
+% Example input: sturmCounter([32,-16,0;-16,32,-16;0,-16,32], 10)
+% Example output: 1, which tells us the matrix A has 1 eigenvalue below 10
 
 n = size(A, 1);
 p = zeros(n+1, 1);     % We want sturm sequence from 0 to n = n+1 elements
