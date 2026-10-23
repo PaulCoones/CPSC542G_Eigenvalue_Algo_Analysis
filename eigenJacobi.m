@@ -77,5 +77,5 @@ for kt=1:max_sweeps
         end
     end
 end
-D = diag(A); % To match the output of the Bisection method and others
+D = sort(diag(A)); % To match the output of the Bisection method and others
 end
