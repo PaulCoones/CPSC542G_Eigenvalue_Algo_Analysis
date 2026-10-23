@@ -16,6 +16,8 @@ p(2) = A(1,1) - shift; % p_1 = a_{1,1} - alpha
 
 for k = 2:n
     % Ref: Trefethen & Bau's Numerical Linear Algebra Equation (30.9)
+    % Caution: Prone to overflow for our triDiag(n) matrices, since as
+    % n increases, so do the terms and thus determinants of A(i,j)
     p(k+1) = ((A(k, k) - shift)*p(k)) - ((A(k, k-1)^2) * p(k-1));
 end
 

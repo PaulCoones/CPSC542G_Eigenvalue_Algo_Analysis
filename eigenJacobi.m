@@ -3,14 +3,14 @@
     of a matrix A using the Jacobi eigenvalue algorithm (T.B. Chapter 30).
 %}
 
-function [D] = eigenJacobi(A, max_sweeps, tol)
+function D = eigenJacobi(A, max_sweeps, tol)
 % x = eigenBisection(A) Returns the .....
-% Requires: A is a (real?) symmetric matrix
-% Time Complexity: O(kn^3) 
+% Requires: A is a real symmetric matrix
+% Time Complexity: O(max_sweeps * n^3) 
 % Output: A diagonalized matrix, where the diagonal elements correspond
 %         to the eigenvalues of A.
-% Example input: eigenJacobi([1, 2; 2, 7])
-% Example output: 
+% Example input: ?? ADD ME ??
+% Example output: ?? ADD ME ??
 
 arguments
     A 
@@ -18,8 +18,9 @@ arguments
     tol=1e-5
 end
 
+% We can assume A is not sparse? Requires statement
 if issparse(A)
-    A = full(A)
+    A = full(A);
 end
 
 % Algorithm
@@ -28,10 +29,10 @@ n = size(A, 1);
 
 mask = true(1, size(A, 1));
 
-% Mentioned in TB Chapter 30. To avoid O(n^2) search, we iterate
+% Mentioned in TB Chapter 30. To avoid an O(n^2) search, we iterate
 % over sweeps of the the off-diag elements.
 for kt=1:max_sweeps
-    % Check if A is diagonal (stop if it is)
+    % Check if A is diagonal and stop if it is
     off = norm(A - diag(diag(A)), "fro");
     if (off < tol)
         break;
@@ -76,5 +77,5 @@ for kt=1:max_sweeps
         end
     end
 end
-D = A;
+D = diag(A); % To match the output of the Bisection method and others
 end

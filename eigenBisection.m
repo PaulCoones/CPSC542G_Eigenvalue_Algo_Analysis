@@ -11,16 +11,16 @@ function x = eigenBisection(A, tol)
 %   This implementation is sequential and naive, as for each eigenvalue,
 %   we restart from the largest possible interval in which the eigenvalue
 %   may be contained, however we can do better, see eigenTreeBisection.m
-% Requires: A is a symmetric tridiagonal square nxn matrix with n >= 1
+% Requires: A is a full symmetric tridiagonal square nxn matrix with n >= 1
 %           A is irreducible s.t. all its off-diagonal entries are nonzero
 %           tol is a finite positive number and ideally made small
-% Time Complexity: O(n^2 * log_2(U - L / tol))
+% Time Complexity: O(n^2 * log_2((U - L) / tol))
 %                  Where n is number of rows/cols in the matrix A
 %                  U and L are the upper and lower bounds on the
 %                  eigenvalues from Gershgorin's circle theorem
 %                  tol is the interval length tolerance
 % Example Input: eigenBisection([32,-16,0;-16,32,-16;0,-16,32], 1e-10)
-% Example Output: [9.3726, 32.0000, 54.6274]
+% Example Output: [9.3726; 32.0000; 54.6274]
 
 % Default arguments if none assigned
 arguments
@@ -57,8 +57,10 @@ for i = 1:n
         midPoint = intervalLen / 2;
         curShift = L + midPoint;
 
-        % If midPoint or L is below machine precision
-        if curShift == L || curShift == U
+        % If we cannot bisect further
+        if curShift == U || curShift == L
+            warning("Machine precision does not allow " + ...
+                    "us to further bisect our intervals.")
             break; % Break out of the loop
         end
 

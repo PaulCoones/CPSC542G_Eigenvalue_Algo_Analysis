@@ -45,12 +45,12 @@ n = size(A, 1);
 x = zeros(n, 1); % Initialize eigenvalue vector
 
 % By Gershgorin's Theorem, all n eigenvalues of A lie within [lowerBound, upperBound]
-x = splitInterval(A, lowerBound, upperBound, 0, n, tol, x);
+x = splitInterval(A, lowerBound, upperBound, 0, n, x, tol);
 
 end
 
 
-function x = splitInterval(A, L, U, countL, countU, tol, x)
+function x = splitInterval(A, L, U, countL, countU, x, tol)
 % x = splitInterval(A, L, U, countL, countU, tol, x) 
 %   Returns the eigenvalues of A in increasing order, by recursively 
 %   bisecting the search interval [L, U] until an interval length tolerance 
@@ -71,8 +71,8 @@ arguments
     U
     countL
     countU
+    x
     tol = 1e-5
-    n
 end
 
 % How many eigenvalues in the current interval
@@ -109,12 +109,12 @@ countNew = sturmCounter(A, newEndpoint);
 
 % Recursively work on the left interval
 if countL < countNew % There are more eigenvalues in countNew
-    x = splitInterval(A, L, newEndpoint, countL, countNew, tol, x); % set U = newEndpoint
+    x = splitInterval(A, L, newEndpoint, countL, countNew, x, tol); % set U = newEndpoint
 end
 
 % Recursively work on the right interval
 if countU > countNew % There are less eigenvalues in countNew
-    x = splitInterval(A, newEndpoint, U, countNew, countU, tol, x); % Set L = newEndpoint
+    x = splitInterval(A, newEndpoint, U, countNew, countU, x, tol); % Set L = newEndpoint
 end
 
 end

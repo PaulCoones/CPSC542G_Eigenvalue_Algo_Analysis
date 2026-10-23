@@ -86,7 +86,7 @@ end
 
 % %CONSOLE TEST
 % if isempty(gcp('nocreate'))
-%     parpool('Processes', 32);
+%     parpool('Processes', 8);
 % end
 % 
 % Z=triDiag(7000,1);
@@ -106,4 +106,9 @@ end
 % x3 = eigenTreeBisection(Z);
 % elapsedTime3 = toc;
 % fprintf('Good Sequential execution time: %.6f seconds\n', elapsedTime3);
+% 
+% tic;
+% x4 = eigenJacobi(Z);
+% elapsedTime4 = toc;
+% fprintf('Jacobi execution time: %.6f seconds\n', elapsedTime4);
 % delete(gcp('nocreate'))
