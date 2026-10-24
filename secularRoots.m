@@ -1,9 +1,9 @@
 function roots = secularRoots(D, beta, z, tol, k)
 
-% Extract and sort diagonal entries (FIX ME: DO I NEED TO SORT????)
+% Extract diagonal entries for ease of readability
 d = diag(D);
-z = z(:)
 
+% Ensure we need to actually do work
 if beta == 0
     roots = d;
     warning("Vanishing rank-1 correction, eigenvalues " + ...
@@ -11,31 +11,30 @@ if beta == 0
     return;
 end
 
-
 % MUST DEAL WITH DEFLATION BEFORE HEADING INTO A ROOT FINDING ALGORITHM!!!
 % Reference: SKIPPED in Trefethen & Bau's Numerical Linear Algebra Chapter 30
 % So I referenced instead https://people.inf.ethz.ch/arbenz/ewp/Lnotes/chapters5-6.pdf
 
 % Identify UNIQUE poles of the "intended" secular function
-[poles, ~, groupInd] = unique(d) %unique(d, 'stable')?
+[poles, ~, groupInd] = unique(d);
 
 % Count multiplicities by adding 1s according to the groupInds
-mult = accumarray(groupInd, 1) 
+mult = accumarray(groupInd, 1);
 
 % Sum the values indices of z associated with repeated poles
-weightSquared = accumarray(groupInd, z.^2)
+weightSquared = accumarray(groupInd, z.^2);
 
 % Retain groups with nonzero weights (according to 2-norm)
-nonZero = weightSquared > 0
+nonZero = weightSquared > 0;
 
 % Known eigenvalues obtained from deflation
 % multiplicity - active term guarantees removal of non-repeated roots
-deflatedRoots = repelem(poles, mult - nonZero)
+deflatedRoots = repelem(poles, mult - nonZero);
 
 % Adjusted d and z values with which we will define the secular equation
 % and solve for its roots.
-dAdj = poles(nonZero)
-zAdj = sqrt(weightSquared(nonZero))
+dAdj = poles(nonZero);
+zAdj = sqrt(weightSquared(nonZero));
 
 % Apply a mixed root finding algorithm combining Newton's and Bisection
 % as Newton's cannot be guaranteed to converge, while Bisection can be.
@@ -61,8 +60,8 @@ else
     searchIntervals = [lowerBound; dAdj];
 end
 
-% Try Newton's, if update diverges to infinity, resort to bisection
-% Define the function we will solve
+% Define the "deflated" secular equation we will solve and its deriv as it
+% is required by Newton's method.
 f = @(lambda) 1 + beta * sum(zAdj.^2 ./ (dAdj - lambda));
 fp = @(lambda) beta * sum(zAdj.^2 ./ (dAdj - lambda).^2);
 
@@ -70,19 +69,20 @@ fp = @(lambda) beta * sum(zAdj.^2 ./ (dAdj - lambda).^2);
 activeRoots = zeros(length(zAdj), 1);
 numIntervals = length(zAdj);
 
-% Call bisectionNewtons in parallel on all intervals
-parfor intervalIndex = 1:numIntervals %  avoid recomputing length
+% Call a root finding algorithm in parallel on all intervals
+parfor intervalIndex = 1:numIntervals
 
-    % Extract interval containing exactly one secular root
+    % Extract intervals, each interval which contains ONLY ONE root
     left = searchIntervals(intervalIndex);
     right = searchIntervals(intervalIndex + 1);
 
-    % Compute secular root using mixed Newton-Bisection algo
-    activeRoots(intervalIndex) = bisectNewtons(f, fp, left, right, 1e-6, 100);
+    % Compute root using a root finding algoritm
+    activeRoots(intervalIndex) = bisectNewtons(f, fp, left, right, tol, k);
 
 end
 
-% Combine active secular roots with known deflated eigenvalues
+% Combine the computed roots (aka eigenvalues) with our already known 
+% deflated eigenvalues to obtain all eigenvalues
 roots = sort([activeRoots(:); deflatedRoots(:)]);
 
 end
@@ -195,3 +195,28 @@ end
 warning('Maximum iterations hit before convergence criterion met.');
 
 end
+
+
+% % CONSOLE TEST FOR THE PROGRAM
+% % 12x12 diagonal matrix with repeated eigenvalues
+% D = diag([8; -3; 2; 8; 0; 15; -3; 5; 0; 22; 11; 5]);
+% 
+% % Rank-one perturbation parameters
+% beta = 1.75;
+% z = [1.2; -0.9; 0; 0.4; 1.5; -1.1; ...
+%     2.0; 0; -0.3; 0.8; -1.4; 0.6];
+% 
+% % Compute eigenvalues using your secular equation solver
+% computedRoots = secularRoots(D, beta, z, 1e-9, 300);
+% 
+% % Compute reference eigenvalues using MATLAB
+% referenceRoots = sort(eig(D + beta*(z*z')));
+% 
+% % Compare the results
+% disp(table(computedRoots, referenceRoots, ...
+%     abs(computedRoots - referenceRoots), ...
+%     'VariableNames', {'Computed', 'MATLAB', 'AbsoluteError'}));
+% 
+% % Maximum absolute error
+% fprintf('Maximum absolute error: %.12e\n', ...
+%     max(abs(computedRoots - referenceRoots)));

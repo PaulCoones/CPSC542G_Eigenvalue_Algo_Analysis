@@ -4,7 +4,7 @@
     Reference: Trefethen & Bau's Numerical Linear Algebra Chapter 30
 %}
 
-function x = eigenDivNConq(A, tol)
+function [lambda, first, last] = eigenDivNConq(A, tol)
 % x = eigenDivNConq(A) Returns the eigenvalues of A in increasing order, 
 %   by applying the divide and conquer eigenvalue algorithm, that is by 
 %   recursively subdividing the problem into problems of smaller dimension.
@@ -18,6 +18,47 @@ function x = eigenDivNConq(A, tol)
 %                  tol is the interval length tolerance
 % Example Input: ?? ADD ME ??
 % Example Output: ?? ADD ME ??
+
+m = size(A, 1);
+
+% Ensure we have some work to do
+if m == 1
+    lambda = A(1,1);
+    first = 1;
+    last = 1;
+    return;
+end
+
+n = floor(m/2);
+beta = A(n, n+1);
+T1 = A(1:n, 1:n);
+T2 = A(n+1:m, n+1:m);
+T1(end, end) = T1(end, end) - beta;
+T2(1,1) = T2(1,1) - beta;
+
+[lambda1, first1, last1] = eigenDivNConq(T1, tol);
+[lambda2, first2, last2] = eigenDivNConq(T2, tol);
+
+% Construct diagonal matrix and rank-one vector
+D = diag([lambda1; lambda2])
+z = [last1'; first2']
+
+% Solve secular equation
+[lambda, V] = secularRoots(D, beta, z, tol, 200)
+
+% Propagate only the boundary eigenvector components
+first = [first1, zeros(1,m-n)] * V
+last = [zeros(1,n), last2] * V
+
+return;
+
+% m = floor(n/2);
+% beta = A(m,m+1);
+% T1 = A(1:m,1:m);
+% T2 = A(m+1:n,m+1:n);
+% T1(end,end) = T1(end,end) - beta;
+% T2(1,1) = T2(1,1) - beta;
+% 
 
 % Algorithm: divideConquer(A)
 % 
@@ -52,52 +93,5 @@ function x = eigenDivNConq(A, tol)
 % last = [zeros(1,m), last2] * V
 % 
 % return lambda, first, last
-
-
-end
-
-function roots = secularRoots(D, beta, z, tol, k)
-% Extract and sort diagonal entries
-[d, idx] = sort(diag(D));
-z = z(idx)
-
-% Identify distinct poles
-[poles, ~, group] = unique(d, 'stable')
-
-% Count multiplicities
-multiplicity = accumarray(group, 1)
-
-% Combine weights associated with repeated poles
-weightSquared = accumarray(group, z.^2)
-
-% Retain groups with nonzero weights
-active = weightSquared > 0
-
-% Eigenvalues obtained directly by deflation
-deflatedRoots = repelem( ...
-    poles, multiplicity - double(active))
-
-% Reduced secular problem
-dReduced = poles(active);
-zReduced = sqrt(weightSquared(active))
-
-    % d = diag(D); 
-    % 
-    % if beta == 0
-    %     warning("Vanishing rank-1 correction, " + ...
-    %         "eigenvalues already in the diagonal entries of D.")
-    %     roots = sort(d);
-    % end
-    % 
-    % 
-    % % Secular eqn and it's derivative
-    % f = @(lambda) 1 + beta * sum(z.^2 ./ (d - lambda));
-    % fp = @(lambda) beta * sum(z.^2 ./ (d - lambda).^2);
-    % 
-    % 
-    % w = sqrt(abs(beta)) * z; 
-
-    
-
 
 end
