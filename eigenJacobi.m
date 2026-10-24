@@ -4,8 +4,9 @@
 %}
 
 function D = eigenJacobi(A, max_sweeps, tol)
-% x = eigenBisection(A) Returns the .....
-% Requires: A is a real symmetric matrix
+% x = eigenBisection(A) Returns the ?? ADD ME ??
+% Requires: A is a real symmetric matrix ?? ADD ME (Refer to Paul's
+% Bisection.m's)
 % Time Complexity: O(max_sweeps * n^3) 
 % Output: A diagonalized matrix, where the diagonal elements correspond
 %         to the eigenvalues of A.

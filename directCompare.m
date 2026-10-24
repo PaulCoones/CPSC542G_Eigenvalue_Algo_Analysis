@@ -14,7 +14,8 @@ close all;
 
 % Test parameters (ensure length(nValues) = length(LValues)
 nValues = [25; 50; 75; 100; 500]; % Add n tests here
-LValues = [1; 1; 1; 1; 1];        % Add corresponding L values here
+LValues = [1; 1; 1; 1; 501];      % Add corresponding L values here
+% For Bisection, if nValue = n, LValue = n+1 enables convergence
 
 numTests = length(nValues);
 
