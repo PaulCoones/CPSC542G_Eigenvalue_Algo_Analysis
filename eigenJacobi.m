@@ -1,17 +1,27 @@
 %{ 
-    eigenJacobi.m provides a standalone function for computing the eigenvalues
+    eigenJacobi.m provides a standalone function for computing all eigenvalues
     of a matrix A using the Jacobi eigenvalue algorithm (T.B. Chapter 30).
 %}
 
+
+
 function D = eigenJacobi(A, max_sweeps, tol)
-% x = eigenBisection(A) Returns the ?? ADD ME ??
-% Requires: A is a real symmetric matrix ?? ADD ME (Refer to Paul's
-% Bisection.m's)
+% x = eigenJacobi(A) Returns the eigenvalues of A in increasing order
+% utilizing the Jacobi eigenvalue method. Starting from the original matrix
+% A we sequentially transform the rows and columns of A using Jacobi
+% rotation matrices that 0 out the off-diagonal elements. After a
+% sufficient number of applications the matrix converges to a diagonal
+% matrix containing the eigenvalues of A
+% Requires: A is a full symmetric square nxn matrix with n >= 1
+%           max_sweeps is a non-zero positive integer that's ideally
+%           greater than 1
+%           tol is finite positive number that's ideally small
 % Time Complexity: O(max_sweeps * n^3) 
-% Output: A diagonalized matrix, where the diagonal elements correspond
-%         to the eigenvalues of A.
-% Example input: ?? ADD ME ??
-% Example output: ?? ADD ME ??
+%           max_sweeps is the upper bound on the number of iterations
+%           in the algorithm.
+%           n is number of rows/columns in the matrix A
+% Example input: eigenJacobi([32,-16,0;-16,32,-16;0,-16,32], 10, 1e-10)
+% Example output: [9.3726; 32.0000; 54.6274]
 
 arguments
     A 
@@ -19,16 +29,7 @@ arguments
     tol=1e-5
 end
 
-% We can assume A is not sparse? Requires statement
-if issparse(A)
-    A = full(A);
-end
-
-% Algorithm
 n = size(A, 1);
-%J = eye(n, n);
-
-mask = true(1, size(A, 1));
 
 % Mentioned in TB Chapter 30. To avoid an O(n^2) search, we iterate
 % over sweeps of the the off-diag elements.
@@ -45,22 +46,56 @@ for kt=1:max_sweeps
             a_jj = A(j, j);
             a_kk = A(k, k);
             a_jk = A(j, k);
-        
-            if (a_jj == a_kk)
-                theta = pi / 4;
-            else
-                theta = 0.5*atan((2*a_jk)/(a_kk - a_jj));
+
+            if (a_jk == 0)
+                continue; % entry already 0
             end
         
+            % % let t = tan(theta), x = tan(2*theta)
+            % % x = (2t)/(1-t^2) <- double angle formula
+            % % x - xt^2 - 2t = 0
+            % % t^2 + (2/x)t - 1 = 0
+            % 
+            % % 1/x = 1/tan(2*\theta) = cot(2*\theta) = r
+            % 
+            % % t^2 + 2rt - 1 = 0
+            % % (t + r)^2 - r^2 - 1 = 0
+            % % (t + r)^2 = 1 + r^2
+            % % t = -r +/- sqrt(1 + r^2)
+            % 
+            % % two solutions, so pick smallest
+            % % if r >= 0 -> t = -r + sqrt(1 + r^2)
+            % % if r < 0 -> t = -r - sqrt(1 + r^2)
+            % 
+            % % this version of t is numerically unstable
+            % % t = (-r +/- sqrt(1 + r^2)) * (r +/- sqrt(1 + r^2))/(r +/- sqrt(1 + r^2))
+            % % t = (-r^2 + 1 + r^2)/(r +/- sqrt(1 + r^2))
+            % % t = 1/(r +/- sqrt(1+r^2))
+            % 
+            % % 1 + t^2 = 1/c^2 (c = cos(theta))
+            % % c = 1/sqrt(1-t^2)
+            % % s = tc (s = sin(theta))
+            % 
+            % r = (a_kk - a_jj) / (2*a_jk);
+            % if r >= 0
+            %     t = 1 / (r + sqrt(1 + r^2));
+            % else
+            %     t = 1 / (r - sqrt(1 + r^2));
+            % end
+            % 
+            % % t != 0 (try and solve above formulas for t=0 if unsure)
+            % c = 1 / sqrt(1 + t^2);
+            % s = t * c;
+            
+            theta = 0.5*acot((a_kk - a_jj) / (2*a_jk));
+            c = cos(theta);
+            s = sin(theta);
+
             % define Jacobi entries
-            J_diag = cos(theta);
-            J_jk = sin(theta);
+            J_diag = c;
+            J_jk = s;
             J_kj = -J_jk;
         
-            %J(j, j) = J_diag;
-            %J(k, k) = J_diag;
-            %J(j, k) = J_jk;
-            %J(k, j) = J_kj;
             J_sub = [J_diag, J_jk; J_kj, J_diag];
 
             % only perform matrix computation on the target rows/columns
@@ -68,13 +103,7 @@ for kt=1:max_sweeps
             A([j, k], :) = J_sub'*A([j, k], :);
             A(j, k) = 0;
             A(k, j) = 0;
-            %A = J'*A*J;
 
-            % zero out elements so J goes back to identity
-            %J(j, j) = 1;
-            %J(k, k) = 1;
-            %J(j, k) = 0;
-            %   J(k, j) = 0;
         end
     end
 end
