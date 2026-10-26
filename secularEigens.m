@@ -72,7 +72,13 @@ for pole = 1:numPoles
     curPivot = indices(1);
     
     for k = 2:numPoleInds
-        % DO WHAT???
+        toRotateOut = indices(k);
+        hypotZ = sqrt(curPivot**2 + toRotateOut**2);
+        c = curPivot / hypotZ;
+        s = toRotateOut / hypotZ; 
+        
+
+        % DO WHAT ROTATE
     end
     
 end
