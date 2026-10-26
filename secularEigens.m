@@ -1,4 +1,4 @@
-function [roots, eigenVectors] = secularEigens(D, beta, z, tol, k)
+function [roots, eigenVectors] = secularEigens(D, beta, z, tol, max_iters)
 
 % Extract diagonal entries for ease of readability
 d = diag(D);
@@ -45,16 +45,24 @@ zAdj = sqrt(weightSquared(nonZero));
 % Construct a cumulative Givens rotations matrix to obtain the 
 % eigenvectors associated with the deflated eigenvalues.
 G = eye(n, n);
-zRot = z;
+
+% Construct a cumulative (hence temporary) rotated version of z
+zTemp = z;
 
 % Keep track of the indics of the deflated eigenvectors
-deflatedInds = zeros(N - length(dAdj), 1);
+deflatedInds = zeros(n - length(dAdj), 1);
+
+% Keep track of the deflated eigenvectors themseleves
+deflatedEigens = zeros(n, n - length(dAdj));
+
+% Keep track of the number of deflated eigenvectors dealt with so far
 curDeflateCount = 0;
 
+% Do work on all the poles
 for pole = 1:numPoles
 
     % Get all indices associated with the current pole
-    curPoleInds = find(pole == groundInd); 
+    curPoleInds = find(pole == groupInd); 
     numPoleInds = length(curPoleInds); % How many repeats
 
     % Check is all components of z corresponding to the pole sum to zero
@@ -62,28 +70,59 @@ for pole = 1:numPoles
     % is an eigenvector of D + beta*z*z' = D on that subspace, 
     % and we can stop looking at this pole immediately and move on
     if ~nonZero(pole) 
-        deflatedInds(curDeflateCount + (1:numPoleInds)) = indices;
-        deflatedCount = deflatedCount + numPoleInds;
+        deflatedInds(curDeflateCount + (1:numPoleInds)) = curPoleInds;
+        curDeflateCount = curDeflateCount + numPoleInds;
 
         continue; % Move onto next iteration as we are done here
     end
 
     % Set a pivot around which we will rotate
-    curPivot = indices(1);
+    curPivotInd = curPoleInds(1);
     
+    % Do extra work on repeated poles with Givens Rotations
     for k = 2:numPoleInds
-        toRotateOut = indices(k);
-        hypotZ = sqrt(curPivot**2 + toRotateOut**2);
-        c = curPivot / hypotZ;
-        s = toRotateOut / hypotZ; 
-        
 
-        % DO WHAT ROTATE
+        % Adjust the current pivot according to the new value given by temp
+        curPivotVal = zTemp(curPivotInd);
+            
+        % Choose the component to zero out
+        indRotatedOut = curPoleInds(k);
+        valRotatedOut = zTemp(indRotatedOut);
+
+        % Find the Givens Rotation angles
+        newPivotVal = sqrt(curPivotVal*curPivotVal + ...
+                           valRotatedOut*valRotatedOut); 
+        % WHAT IF ZERO? IS IT POSSIBLEz?????
+
+        c = curPivotVal / newPivotVal;
+        s = valRotatedOut / newPivotVal; 
+
+        % Apply the current Givens rotation to zero out the corresponding
+        % component in the cumulative Givens rotation matrix G.
+        G(:, [curPivotInd, indRotatedOut]) = G(:, [curPivotInd, indRotatedOut]) * ...
+                                             [c, -s; s, c];
+
+        % Adjust z so that it now has a zeroed out component toRotateOut
+        zTemp([curPivotInd, indRotatedOut]) = [newPivotVal; 0];
     end
-    
+
+    % Calculate how many deflations we've done (all but the Pivot)
+    numDeflations = length(curPoleInds) - 1;
+
+    if numDeflations > 0
+        % Keep track of which indices we have deflated to later determine
+        % eigenvectors
+        deflatedInds(curDeflateCount + (1:numDeflations)) = curPoleInds(2:end);
+
+        % Adjust number of deflations completed in total so far
+        curDeflateCount = curDeflateCount + numDeflations; 
+    end
+
 end
 
-
+% Get the eigenvectors, equivalent to G * I(:, deflatedInds), 
+% with I = eye(n,n).
+deflatedEigens = G(:, deflatedInds);
 
 % Lowest possible value of any eigenvalue by Gershgorin's
 % Recalling M[i,i] = D[i,i] + beta*z[i]*z[i]
@@ -111,7 +150,7 @@ f = @(lambda) 1 + beta * sum(zAdj.^2 ./ (dAdj - lambda));
 fp = @(lambda) beta * sum(zAdj.^2 ./ (dAdj - lambda).^2);
 
 % Initalize
-activeRoots = zeros(length(zAdj), 1);
+nonDeflatedRoots = zeros(length(zAdj), 1);
 numIntervals = length(zAdj);
 
 % Call a root finding algorithm in parallel on all intervals
@@ -122,13 +161,46 @@ parfor intervalIndex = 1:numIntervals
     right = searchIntervals(intervalIndex + 1);
 
     % Compute root using a root finding algoritm
-    activeRoots(intervalIndex) = bisectNewtons(f, fp, left, right, tol, k);
+    nonDeflatedRoots(intervalIndex) = ...
+                    bisectNewtons(f, fp, left, right, tol, max_iters);
 
 end
 
-% Combine the computed roots (aka eigenvalues) with our already known 
-% deflated eigenvalues to obtain all eigenvalues
-roots = sort([activeRoots(:); deflatedRoots(:)]);
+% Explicitly construct the eigenvectors for the nonDeflatedRoots
+% In particular, the eigenvectors of the matrix 
+% MAdj = diag(dAdj) + beta * (zAdj*zAdj');
+% Why can I use numIntervals? Well every interval contains exactly
+% one eigenvalue, so the number of eigenvectors/eigenvalues = number of
+% intervals.
+nonDeflatedEigenVecs = zeros(numIntervals, numIntervals);
+
+for rootInd = 1:numIntervals
+    eigenvector = zAdj ./ (dAdj - nonDeflatedRoots(rootInd)); % elem-wise
+    nonDeflatedEigenVecs(:, rootInd) = eigenvector / norm(eigenvector);
+end
+
+% Obtain the non-deflated coordinate indices
+nonDeflatedInds = setdiff((1:n)', deflatedInds);
+
+% MUST REORDER TO MATCH INCREASING POLE ORDER OF dAdj var
+[~, newOrdering] = sort(groupInd(nonDeflatedInds)); % Only need the indices, not the sorted version
+nonDeflatedInds = nonDeflatedInds(newOrdering);
+
+% Map to the the original coordinates
+V = G(:, nonDeflatedInds) * diag(sign(zTemp(nonDeflatedInds)));
+
+% Transform the reduced eigenvectors
+nonDeflatedEigenVecs = V * nonDeflatedEigenVecs;
+
+% Combine the deflated and non deflated roots
+[roots, newOrdering] = sort([nonDeflatedRoots(:); deflatedRoots(:)]);
+
+% Combine deflated and non deflated eigenvectors
+eigenVectors = [nonDeflatedEigenVecs, deflatedEigens];
+
+% Reorder eigenvectors to match the ordering of the eigenvalues
+% (increasingly sorted by sort(...)).
+eigenVectors = eigenVectors(:, newOrdering);
 
 end
 

@@ -4,7 +4,7 @@
     Reference: Trefethen & Bau's Numerical Linear Algebra Chapter 30
 %}
 
-function [lambda, first, last] = eigenDivNConq(A, tol)
+function [lambda, first, last] = eigenDivNConq(A, tol, maxIters)
 % x = eigenDivNConq(A) Returns the eigenvalues of A in increasing order, 
 %   by applying the divide and conquer eigenvalue algorithm, that is by 
 %   recursively subdividing the problem into problems of smaller dimension.
@@ -19,9 +19,16 @@ function [lambda, first, last] = eigenDivNConq(A, tol)
 % Example Input: ?? ADD ME ??
 % Example Output: ?? ADD ME ??
 
+arguments
+    A
+    tol = 1e-8
+    maxIters = 200
+end
+
 m = size(A, 1);
 
-% Ensure we have some work to do
+% Base case : 1x1 matrix, eigenvalues and vectors are trivial
+% Future consideration: Try a 2x2 matrix base case!
 if m == 1
     lambda = A(1,1);
     first = 1;
@@ -29,69 +36,29 @@ if m == 1
     return;
 end
 
+% Divide the subproblem
 n = floor(m/2);
 beta = A(n, n+1);
 T1 = A(1:n, 1:n);
 T2 = A(n+1:m, n+1:m);
+
+% Adjust for the rank-1 update matrix
 T1(end, end) = T1(end, end) - beta;
 T2(1,1) = T2(1,1) - beta;
 
+% Work on the divided ~halves
 [lambda1, first1, last1] = eigenDivNConq(T1, tol);
 [lambda2, first2, last2] = eigenDivNConq(T2, tol);
 
 % Construct diagonal matrix and rank-one vector
-D = diag([lambda1; lambda2])
-z = [last1'; first2']
+D = diag([lambda1; lambda2]);
+z = [last1'; first2'];
 
 % Solve secular equation
-[lambda, V] = secularRoots(D, beta, z, tol, 200)
+[lambda, V] = secularEigens(D, beta, z, tol, maxIters);
 
 % Propagate only the boundary eigenvector components
-first = [first1, zeros(1,m-n)] * V
-last = [zeros(1,n), last2] * V
+first = [first1, zeros(1,m-n)] * V;
+last = [zeros(1,n), last2] * V;
 
 return;
-
-% m = floor(n/2);
-% beta = A(m,m+1);
-% T1 = A(1:m,1:m);
-% T2 = A(m+1:n,m+1:n);
-% T1(end,end) = T1(end,end) - beta;
-% T2(1,1) = T2(1,1) - beta;
-% 
-
-% Algorithm: divideConquer(A)
-% 
-% n = size(A,1)
-% 
-% IF n == 1
-% return A(1,1), 1, 1
-% END
-% 
-% m = floor(n/2)
-% beta = A(m,m+1)
-% 
-% A1 = A(1:m,1:m)
-% A2 = A(m+1:n,m+1:n)
-% 
-% A1(m,m) = A1(m,m) - beta
-% A2(1,1) = A2(1,1) - beta
-% 
-% % Recursively solve subproblems
-% [lambda1, first1, last1] = divideConquer(A1)
-% [lambda2, first2, last2] = divideConquer(A2)
-% 
-% % Construct diagonal matrix and rank-one vector
-% D = diag([lambda1; lambda2])
-% z = [last1'; first2']
-% 
-% % Solve secular equation
-% [lambda, V] = secularEigenpairs(D, beta, z)
-% 
-% % Propagate only the boundary eigenvector components
-% first = [first1, zeros(1,n-m)] * V
-% last = [zeros(1,m), last2] * V
-% 
-% return lambda, first, last
-
-end
