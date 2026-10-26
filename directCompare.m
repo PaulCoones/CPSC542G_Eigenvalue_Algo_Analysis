@@ -13,8 +13,8 @@ clear all;
 close all;
 
 % Test parameters (ensure length(nValues) = length(LValues)
-nValues = [25; 50; 75; 100; 300; 500; 750; 1000; 1200]; % Add n tests here
-LValues = [1; 1; 1; 1; 1; 501; 751; 1001; 1201];      % Add corresponding L values here
+nValues = [12000]; % Add n tests here
+LValues = [12001];      % Add corresponding L values here
 % For Bisection, if nValue = n, LValue = n+1 enables error convergence
 % with certainty. As otherwise, values in the triDiag matrix grow
 % without bound with increasing n.
@@ -24,7 +24,7 @@ numTests = length(nValues);
 
 % Initalize the two algorithms to compare
 algorithmX = @eigenDivNConq; % Change X to, for example, eigenParBisection or other
-algorithmY = @eigenJacobi;   % Change Y to, for example, eigenTreeBisection or other
+algorithmY = @eigenTreeBisection;   % Change Y to, for example, eigenTreeBisection or other
 
 % Initialize errors
 errorX = zeros(numTests, 1);
@@ -35,8 +35,8 @@ timeX = zeros(numTests, 1);
 timeY = zeros(numTests, 1);
 
 % % Activate the parallel pool before performing computations in parallel
-% parpool('Processes', 8); % Use cores
-% parpool('Threads', 8);   % Use threads
+%parpool('Processes', 8); % Use cores
+parpool('Threads', 8);   % Use threads
 
 % Benchmark and record errors
 for i = 1:numTests
@@ -77,13 +77,13 @@ for i = 1:numTests
 end
 
 % % Delete the parallel pool after having finished parallel executions
-% delete(gcp('nocreate'));
+delete(gcp('nocreate'));
 
 % Tabulate the results
 results = table( ...
     nValues, LValues, ...
     errorX, errorY, timeX, timeY, ...
-    'Var Names', ...
+    'VariableNames', ...
     {'n', 'L', ...
      'Error2Norm_AlgoX', 'Error2Norm_AlgoY', ...
      'Time_AlgoX(in s)', 'Time_AlgoY(in s)'});
