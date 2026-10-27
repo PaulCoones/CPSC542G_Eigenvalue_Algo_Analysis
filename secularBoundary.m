@@ -24,9 +24,12 @@ end
 % Reference: SKIPPED in Trefethen & Bau's Numerical Linear Algebra Chapter 30
 % So I referenced instead https://people.inf.ethz.ch/arbenz/ewp/Lnotes/chapters5-6.pdf
 
-% Identify UNIQUE poles of the "intended" secular function
-[poles, ~, groupInd] = unique(d);
-numPoles = length(poles); % Record the number of poles for later use
+% Identify TOLERABLY UNIQUE poles of the "intended" secular function
+% Question: What tolerance should we even use???
+% [poles, ~, groupInd] = unique(d); % No tolerance
+poleTol = 10 * max(tol, n * eps * norm(d, inf));
+[poles, ~, groupInd] = uniquetol(d, poleTol, 'DataScale', 1); % Tolerance
+numPoles = length(poles); 
 
 % Count multiplicities by adding 1s according to the groupInds
 mult = accumarray(groupInd, 1);
