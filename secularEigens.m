@@ -15,7 +15,7 @@ if beta == 0
     eigenVectors = eigenVectors(:, newOrdering); % follows the sorting above
     return;
 end
-
+    
 % MUST DEAL WITH DEFLATION BEFORE HEADING INTO A ROOT FINDING ALGORITHM!!!
 % Reference: SKIPPED in Trefethen & Bau's Numerical Linear Algebra Chapter 30
 % So I referenced instead https://people.inf.ethz.ch/arbenz/ewp/Lnotes/chapters5-6.pdf
@@ -106,7 +106,7 @@ for pole = 1:numPoles
         zTemp([curPivotInd, indRotatedOut]) = [newPivotVal; 0];
     end
 
-    % Calculate how many deflations we've done (all but the Pivot)
+    % Calculate how many deflations we've done (all but the pivot)
     numDeflations = length(curPoleInds) - 1;
 
     if numDeflations > 0
@@ -144,8 +144,8 @@ else
     searchIntervals = [lowerBound; dAdj];
 end
 
-% Define the "deflated" secular equation we will solve and its deriv as it
-% is required by Newton's method.
+% Define the "deflated" secular equation which we will solve 
+% and its deriv as required by Newton's method.
 f = @(lambda) 1 + beta * sum(zAdj.^2 ./ (dAdj - lambda));
 fp = @(lambda) beta * sum(zAdj.^2 ./ (dAdj - lambda).^2);
 
@@ -161,8 +161,8 @@ parfor intervalIndex = 1:numIntervals
     right = searchIntervals(intervalIndex + 1);
 
     % Compute root using a root finding algoritm
-    nonDeflatedRoots(intervalIndex) = ...
-                    bisectNewtons(f, fp, left, right, tol, max_iters);
+    nonDeflatedRoots(intervalIndex) = bisectNewtons(f, fp, left, right, ...
+                                                    tol, max_iters);
 
 end
 
