@@ -1,12 +1,19 @@
-function [lambda,itn] = qreig(A,tol)
+function [lambda, itn] = qreig(A, tol, max_iter)
   %
   % function [lambda,itn] = qreig(A,Tol)
   %
   % Find all real eigenvalues lambda of A
   % Return also iteration counters in itn
 
+  arguments
+      A
+      tol = 1e-8
+      max_iter = 200
+  end
+
   % First stage, bring to upper Hessenberg form
   % A = houseeig(A); % NOT NEEDED FOR TriDiag Matrices
+  
 
   % Second stage: deflation loop
   n = size(A,1);
@@ -34,7 +41,7 @@ function [lambda,itn] = qreig(A,tol)
         return
     end
 
-    while (iter < 100) % Max number of iterations
+    while (iter < max_iter) % Max number of iterations
 
         if (abs(A(m,m-1)) < tol)
             return
