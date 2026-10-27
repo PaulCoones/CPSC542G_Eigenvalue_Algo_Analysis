@@ -12,8 +12,8 @@ clearvars;
 close all;
 
 % (n, L) Pairs to be tested
-nValues = [15, 250, 250, 325, 500];
-LValues = [1, 1, 251, 177, 501];
+nValues = [128];
+LValues = [129];
 numTests = length(nValues);
 
 % Change me if you want to change the number of workers
@@ -29,7 +29,7 @@ methodNames = {'Naive Bisection', ...
 
 methods = {@eigenBisection, @eigenParBisection, ...
            @eigenTreeBisection, @eigenJacobi, ...
-           @eigenDivNConq, @qreig};
+           @eigenDivNConq, @stdQRIteration};
 
 numMethods = length(methods);
 
@@ -56,7 +56,7 @@ for i = 1:numTests
     % Construct tridiagonal matrix and compute all its n-known eigenvalues
     % Future considerations: Test other matrices other than triDiag
     T = triDiag(n, L);
-    lambdaExact = exactTriDiagEigens(n/(L + 1), (1:n)', n); % k spans 1 -> n
+    lambdaExact = exactTriDiagEigens(L/(n + 1), (1:n)', n); % k spans 1 -> n
 
     % For each fixed test pair (n, L), try each algorithm
     for j = 1:numMethods
@@ -85,9 +85,9 @@ end
 % Setup the table!
 results = table(nCol, LCol, algoNames, execTime, norm2Err, ...
      'VariableNames', {'n', 'L', 'Algorithm', ...
-     'Mean Time (s)', 'Mean 2-Norm Error'});
+     'Execution Time (s)', '2-Norm Error'});
 
-fprintf('\n=== EIGENVALUE ALGORITHM COMPARISON ===\n\n');
+fprintf('\n Eigenvalue Algorithms Tabulated \n\n');
 
 % Format (short scientific notation)
 format short e

@@ -8,7 +8,7 @@ function [lambda, itn] = qreig(A, tol, max_iter)
   arguments
       A
       tol = 1e-8
-      max_iter = 200
+      max_iter = 1000
   end
 
   % First stage, bring to upper Hessenberg form
