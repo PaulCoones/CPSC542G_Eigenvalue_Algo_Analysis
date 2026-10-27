@@ -48,8 +48,8 @@ T2(1,1) = T2(1,1) - beta;
 
 
 % Work on the divided ~halves
-[lambda1, first1, last1] = eigenDivNConq(T1, tol);
-[lambda2, first2, last2] = eigenDivNConq(T2, tol);
+[lambda1, first1, last1] = eigenDivNConqNew(T1, tol);
+[lambda2, first2, last2] = eigenDivNConqNew(T2, tol);
 
 % Construct diagonal matrix and rank-one vector
 D = diag([lambda1; lambda2]);
@@ -61,6 +61,6 @@ lastRowBound = [zeros(1,n), last2];
 
 % Return eigenvalues and boundary rows
 [lambda, first, last] = secularBoundary(D, beta, z, firstRowBound, ...
-    lastRowBound, tol, 200);
+    lastRowBound, tol, maxIters);
 
 return;
