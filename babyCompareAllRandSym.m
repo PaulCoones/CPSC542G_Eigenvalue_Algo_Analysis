@@ -1,9 +1,9 @@
-
 %{
     compareAllRandSym.m Is a program which compares all relevant
     (eigenvalue) algorithms on a random symmetric matrix constructed from
     By comparing their execution times and errors in their computed 
     eigenvalues within a csv table.
+    In particular on a smaller subset of n-values, hence baby.
 
     Hit run to run the program and save the results to a CSV table.
     Change the Test parameters and/or algorithm parameters to compare
