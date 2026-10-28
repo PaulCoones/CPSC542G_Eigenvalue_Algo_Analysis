@@ -1,8 +1,9 @@
 %{
-    compareAllRandSym.m Is a program which compares all relevant
-    (eigenvalue) algorithms on a random symmetric matrix constructed from
-    By comparing their execution times and errors in their computed 
-    eigenvalues within a csv table.
+    compareAll2DTriDiag.m Is a program which compares all relevant
+    (eigenvalue) algorithms on a symmetric matrix constructed from
+    2D finite differences of the Laplacian. In particular, by comparing
+    their execution times and errors in their computed eigenvalues within 
+    an output csv table.
 
     Hit run to run the program and save the results to a CSV table.
     Change the Test parameters and/or algorithm parameters to compare
@@ -31,11 +32,14 @@ fileName = ['directNaiveCompareAll_' datestr(now, 'yyyymmdd_HHMMSS') '.csv'];
 resultsFile = fullfile(outputDir, fileName);
 
 % Test parameters
-nValues1 = 2.^(5:10);    % Test all seven algorithms (n = 32 to 2048)
-nValues2 = [2.^(12:16)]; % Test three algorithms (n = 4096 to 70000)
+% NOTE THESE VALUES ARE SQUARED FOR THE MATRIX DIMENSION! 2D FINITE DIFF!!
+mValues1 = [6, 8, 12, 16, 24, 32, 45]; % Test all algorithms (n = 32 to 2048)
+mValues2 = [64, 90, 128, 181, 256];    % Test fast algorithms (n = 4096 to 70000)
 
 % Combine both sets of test parameters
-nValues = [nValues1, nValues2]; % All n values to test
+mValues = [mValues1, mValues2];
+nValues = mValues.^2;
+LValues = mValues + 1;
 
 % Caclulate how many tests we have to compute
 numTests = length(nValues);
@@ -62,6 +66,7 @@ for i = 1:numTests
 
     % Iterate over all testing dimensions
     n = nValues(i);
+    L = LValues(i);
 
     % Display progress of current test
     fprintf('\nRunning test %d of %d: n = %d\n', ...
@@ -69,7 +74,7 @@ for i = 1:numTests
 
     % Perform the benchmark in a separate function so that its
     % large matrices and intermediate variables are released afterward
-    resultsRow = runBenchmark(n, ...
+    resultsRow = runBenchmark(n, L, ...
         algorithmDivNConq, algorithmTreeBi, algorithmParBi, ...
         algorithmNaiveBi, algorithmQRIter, algorithmShiftQRIter, ...
         algorithmJacobi);
@@ -99,7 +104,7 @@ fprintf('\n All %d tests completed. \n', numTests);
 fprintf('All results saved to: \n %s \n', resultsFile);
 
 
-function CSVresultsRow = runBenchmark(n, algorithmDivNConq, algorithmTreeBi, ...
+function CSVresultsRow = runBenchmark(n, L, algorithmDivNConq, algorithmTreeBi, ...
     algorithmParBi, algorithmNaiveBi, algorithmQRIter, algorithmShiftQRIter, ...
     algorithmJacobi)
 
@@ -125,7 +130,8 @@ function CSVresultsRow = runBenchmark(n, algorithmDivNConq, algorithmTreeBi, ...
     rng(77);
 
     % Construct 2D finite-difference Laplacian
-    [A, ~] = Lap2D(m, @heatSource);
+    m = sqrt(n);
+    [A, ~] = Lap2D(m, L, @heatSource);
 
     % Compute exact eigenvalues using MATLABs eig
     lambdaExact = sort(eig(A));
@@ -183,7 +189,7 @@ function CSVresultsRow = runBenchmark(n, algorithmDivNConq, algorithmTreeBi, ...
         clear lambdaQRIter;
 
         % Compute approximate eigenvalues using Jacobi
-        [lambdaJacobi, timeJacobi] = timeAlgorithm(algorithmJacobi, Z, n);
+        [lambdaJacobi, timeJacobi] = timeAlgorithm(algorithmJacobi, A, n);
         lambdaJacobi = sort(lambdaJacobi(:));
         errorJacobi = norm(lambdaExact - lambdaJacobi, 2);
         clear lambdaJacobi;
@@ -191,12 +197,12 @@ function CSVresultsRow = runBenchmark(n, algorithmDivNConq, algorithmTreeBi, ...
 
     % Tabulate the results for the currents test
     CSVresultsRow = table( ...
-        n, errorNaiveBi, errorParBi, errorTreeBi, ...
+        n, L, errorNaiveBi, errorParBi, errorTreeBi, ...
         errorQRIter, errorShiftQRIter, errorJacobi, errorDivNConq, ...
         timeNaiveBi, timeParBi, timeTreeBi, ...
         timeQRIter, timeShiftQRIter, timeJacobi, timeDivNConq, ...
         'VariableNames', ...
-        {'n', 'Error2Norm_NaiveBisect', 'Error2Norm_ParBisect', ...
+        {'n', 'L', 'Error2Norm_NaiveBisect', 'Error2Norm_ParBisect', ...
          'Error2Norm_TreeBisect', 'Error2Norm_QRIter', ...
          'Error2Norm_ShiftQRIter', 'Error2Norm_Jacobi', ...
          'Error2Norm_DivNConq', ...
