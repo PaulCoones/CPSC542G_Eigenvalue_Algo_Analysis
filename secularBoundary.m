@@ -221,7 +221,7 @@ for rootInd = 1:numIntervals
 end
 
 % Combine the deflated and non deflated roots
-[roots, newOrdering] = sort([nonDeflatedRoots; deflatedRoots]);
+[roots, newOrdering] = sort([nonDeflatedRoots(:); deflatedRoots(:)]);
 
 % Combine deflated and non deflated boundary components
 first = [nonDeflatedFirst, deflatedFirst];
