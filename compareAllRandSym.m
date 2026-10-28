@@ -130,14 +130,14 @@ function CSVresultsRow = runBenchmark(n, algorithmDivNConq, algorithmTreeBi, ...
     % Compute all reference eigenvalues using MATLAB eig
     lambdaExact = sort(eig(Z));
 
-    % Compute the symmetric tridiagonal matrix using Householder
-    [T, timeHouseEig] = timeAlgorithm(@houseeig, Z, n);
+    % Compute the symmetric tridiagonal matrix using MATLABs hess
+    [T, timeTridiagonalize] = timeAlgorithm(@hess, Z, n);
 
     % Test Divide and Conquer, Tree Bisection and Parallel Bisection
     % for all values of n!
     % Compute approximate eigenvalues using Divide and Conquer
     [lambdaDivNConq, timeDivNConq] = timeAlgorithm(algorithmDivNConq, T, n);
-    timeDivNConq = timeDivNConq + timeHouseEig;
+    timeDivNConq = timeDivNConq + timeTridiagonalize;
     % Incase eigenvalues not sorted, sort eigenvalues in ascending order
     lambdaDivNConq = sort(lambdaDivNConq(:));
     errorDivNConq = norm(lambdaExact - lambdaDivNConq, 2);
@@ -145,14 +145,14 @@ function CSVresultsRow = runBenchmark(n, algorithmDivNConq, algorithmTreeBi, ...
 
     % Compute approximate eigenvalues using Tree Bisection
     [lambdaTreeBi, timeTreeBi] = timeAlgorithm(algorithmTreeBi, T, n);
-    timeTreeBi = timeTreeBi + timeHouseEig;
+    timeTreeBi = timeTreeBi + timeTridiagonalize;
     lambdaTreeBi = sort(lambdaTreeBi(:));
     errorTreeBi = norm(lambdaExact - lambdaTreeBi, 2);
     clear lambdaTreeBi;
 
     % Compute approximate eigenvalues using Naive Parallel Bisection
     [lambdaParBi, timeParBi] = timeAlgorithm(algorithmParBi, T, n);
-    timeParBi = timeParBi + timeHouseEig;
+    timeParBi = timeParBi + timeTridiagonalize;
     lambdaParBi = sort(lambdaParBi(:));
     errorParBi = norm(lambdaExact - lambdaParBi, 2);
     clear lambdaParBi;
@@ -161,14 +161,14 @@ function CSVresultsRow = runBenchmark(n, algorithmDivNConq, algorithmTreeBi, ...
     if n <= 2048
         % Compute approximate eigenvalues using Naive Sequential Bisection
         [lambdaNaiveBi, timeNaiveBi] = timeAlgorithm(algorithmNaiveBi, T, n);
-        timeNaiveBi = timeNaiveBi + timeHouseEig;
+        timeNaiveBi = timeNaiveBi + timeTridiagonalize;
         lambdaNaiveBi = sort(lambdaNaiveBi(:));
         errorNaiveBi = norm(lambdaExact - lambdaNaiveBi, 2);
         clear lambdaNaiveBi;
 
         % Compute approximate eigenvalues using QR Iteration
         [lambdaQRIter, timeQRIter] = timeAlgorithm(algorithmQRIter, T, n);
-        timeQRIter = timeQRIter + timeHouseEig;
+        timeQRIter = timeQRIter + timeTridiagonalize;
         lambdaQRIter = sort(lambdaQRIter(:));
         errorQRIter = norm(lambdaExact - lambdaQRIter, 2);
         clear lambdaQRIter;
@@ -176,7 +176,7 @@ function CSVresultsRow = runBenchmark(n, algorithmDivNConq, algorithmTreeBi, ...
         % Compute approximate eigenvalues using Shifted QR Iteration
         [lambdaShiftQRIter, timeShiftQRIter] = timeAlgorithm( ...
                                             algorithmShiftQRIter, T, n);
-        timeShiftQRIter = timeShiftQRIter + timeHouseEig;
+        timeShiftQRIter = timeShiftQRIter + timeTridiagonalize;
         lambdaShiftQRIter = sort(lambdaShiftQRIter(:));
         errorShiftQRIter = norm(lambdaExact - lambdaShiftQRIter, 2);
         clear lambdaShiftQRIter;
@@ -204,7 +204,7 @@ function CSVresultsRow = runBenchmark(n, algorithmDivNConq, algorithmTreeBi, ...
          'Time_ShiftQRIter(in s)', 'Time_Jacobi(in s)', 'Time_DivNConq(in s)'});
 
     % Clear intermediate vars for more space
-    clear A Z T lambdaExact timeHouseEig;
+    clear A Z T lambdaExact timeTridiagonalize;
 
 end
 
