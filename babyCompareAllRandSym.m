@@ -3,7 +3,6 @@
     (eigenvalue) algorithms on a random symmetric matrix constructed from
     By comparing their execution times and errors in their computed 
     eigenvalues within a csv table.
-    In particular on a smaller subset of n-values, hence baby.
 
     Hit run to run the program and save the results to a CSV table.
     Change the Test parameters and/or algorithm parameters to compare
@@ -33,7 +32,7 @@ resultsFile = fullfile(outputDir, fileName);
 
 % Test parameters
 nValues1 = 2.^(5:6);           % Test all seven algorithms (n = 32 to 2048)
-nValues2 = 128; % Test three algorithms (n = 4096 to 70000)
+nValues2 = 256; % Test three algorithms (n = 4096 to 70000)
 
 % Combine both sets of test parameters
 nValues = [nValues1, nValues2]; % All n values to test
@@ -132,13 +131,13 @@ function CSVresultsRow = runBenchmark(n, algorithmDivNConq, algorithmTreeBi, ...
     lambdaExact = sort(eig(Z));
 
     % Compute the symmetric tridiagonal matrix using Householder
-    [T, timeHouseEig] = timeAlgorithm(@houseeig, Z, n);
+    [T, timeTriangularization] = timeAlgorithm(@hess, Z, n);
 
     % Test Divide and Conquer, Tree Bisection and Parallel Bisection
     % for all values of n!
     % Compute approximate eigenvalues using Divide and Conquer
     [lambdaDivNConq, timeDivNConq] = timeAlgorithm(algorithmDivNConq, T, n);
-    timeDivNConq = timeDivNConq + timeHouseEig;
+    timeDivNConq = timeDivNConq + timeTriangularization;
     % Incase eigenvalues not sorted, sort eigenvalues in ascending order
     lambdaDivNConq = sort(lambdaDivNConq(:));
     errorDivNConq = norm(lambdaExact - lambdaDivNConq, 2);
@@ -146,30 +145,37 @@ function CSVresultsRow = runBenchmark(n, algorithmDivNConq, algorithmTreeBi, ...
 
     % Compute approximate eigenvalues using Tree Bisection
     [lambdaTreeBi, timeTreeBi] = timeAlgorithm(algorithmTreeBi, T, n);
-    timeTreeBi = timeTreeBi + timeHouseEig;
+    timeTreeBi = timeTreeBi + timeTriangularization;
     lambdaTreeBi = sort(lambdaTreeBi(:));
     errorTreeBi = norm(lambdaExact - lambdaTreeBi, 2);
     clear lambdaTreeBi;
 
     % Compute approximate eigenvalues using Naive Parallel Bisection
     [lambdaParBi, timeParBi] = timeAlgorithm(algorithmParBi, T, n);
-    timeParBi = timeParBi + timeHouseEig;
+    timeParBi = timeParBi + timeTriangularization;
     lambdaParBi = sort(lambdaParBi(:));
     errorParBi = norm(lambdaExact - lambdaParBi, 2);
     clear lambdaParBi;
+
+
+    % Compute approximate eigenvalues using Jacobi
+    [lambdaJacobi, timeJacobi] = timeAlgorithm(algorithmJacobi, Z, n);
+    lambdaJacobi = sort(lambdaJacobi(:));
+    errorJacobi = norm(lambdaExact - lambdaJacobi, 2);
+    clear lambdaJacobi;
 
     % Test all seven algorithms for n = 32 to 2048
     if n <= 64
         % Compute approximate eigenvalues using Naive Sequential Bisection
         [lambdaNaiveBi, timeNaiveBi] = timeAlgorithm(algorithmNaiveBi, T, n);
-        timeNaiveBi = timeNaiveBi + timeHouseEig;
+        timeNaiveBi = timeNaiveBi + timeTriangularization;
         lambdaNaiveBi = sort(lambdaNaiveBi(:));
         errorNaiveBi = norm(lambdaExact - lambdaNaiveBi, 2);
         clear lambdaNaiveBi;
 
         % Compute approximate eigenvalues using QR Iteration
         [lambdaQRIter, timeQRIter] = timeAlgorithm(algorithmQRIter, T, n);
-        timeQRIter = timeQRIter + timeHouseEig;
+        timeQRIter = timeQRIter + timeTriangularization;
         lambdaQRIter = sort(lambdaQRIter(:));
         errorQRIter = norm(lambdaExact - lambdaQRIter, 2);
         clear lambdaQRIter;
@@ -177,16 +183,10 @@ function CSVresultsRow = runBenchmark(n, algorithmDivNConq, algorithmTreeBi, ...
         % Compute approximate eigenvalues using Shifted QR Iteration
         [lambdaShiftQRIter, timeShiftQRIter] = timeAlgorithm( ...
                                             algorithmShiftQRIter, T, n);
-        timeShiftQRIter = timeShiftQRIter + timeHouseEig;
+        timeShiftQRIter = timeShiftQRIter + timeTriangularization;
         lambdaShiftQRIter = sort(lambdaShiftQRIter(:));
         errorShiftQRIter = norm(lambdaExact - lambdaShiftQRIter, 2);
         clear lambdaShiftQRIter;
-
-        % Compute approximate eigenvalues using Jacobi
-        [lambdaJacobi, timeJacobi] = timeAlgorithm(algorithmJacobi, Z, n);
-        lambdaJacobi = sort(lambdaJacobi(:));
-        errorJacobi = norm(lambdaExact - lambdaJacobi, 2);
-        clear lambdaJacobi;
     end
 
     % Tabulate the results for the currents test
@@ -205,7 +205,7 @@ function CSVresultsRow = runBenchmark(n, algorithmDivNConq, algorithmTreeBi, ...
          'Time_ShiftQRIter(in s)', 'Time_Jacobi(in s)', 'Time_DivNConq(in s)'});
 
     % Clear intermediate vars for more space
-    clear A Z T lambdaExact timeHouseEig;
+    clear A Z T lambdaExact timeTriangularization;
 
 end
 
