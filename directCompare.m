@@ -9,12 +9,12 @@
 %}
 
 % Clean workspace
-clear all;
+clearvars;
 close all;
 
 % Test parameters (ensure length(nValues) = length(LValues)
-nValues = [12000]; % Add n tests here
-LValues = [12001];      % Add corresponding L values here
+nValues = [32; 64; 64; 64; 64; 128; 256; 512]; % Add n tests here
+LValues = [33; 0.01; 1; 65; 129; 129; 257; 513];      % Add corresponding L values here
 % For Bisection, if nValue = n, LValue = n+1 enables error convergence
 % with certainty. As otherwise, values in the triDiag matrix grow
 % without bound with increasing n.
@@ -23,8 +23,8 @@ LValues = [12001];      % Add corresponding L values here
 numTests = length(nValues);
 
 % Initalize the two algorithms to compare
-algorithmX = @eigenDivNConq; % Change X to, for example, eigenParBisection or other
-algorithmY = @eigenTreeBisection;   % Change Y to, for example, eigenTreeBisection or other
+algorithmX = @stdQRIteration; % Change X to, for example, eigenParBisection or other
+algorithmY = @eigenJacobi;    % Change Y to, for example, eigenTreeBisection or other
 
 % Initialize errors
 errorX = zeros(numTests, 1);
@@ -36,7 +36,7 @@ timeY = zeros(numTests, 1);
 
 % % Activate the parallel pool before performing computations in parallel
 %parpool('Processes', 8); % Use cores
-parpool('Threads', 8);   % Use threads
+parpool('Threads', 8);    % Use threads
 
 % Benchmark and record errors
 for i = 1:numTests

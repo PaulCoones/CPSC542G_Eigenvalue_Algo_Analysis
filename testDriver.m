@@ -12,8 +12,8 @@ clearvars;
 close all;
 
 % (n, L) Pairs to be tested
-nValues = [128];
-LValues = [129];
+nValues = [256; 256; 257; 257; 258; 258; 259; 259; 512; 513];
+LValues = [25.7; 257; 25.7; 257; 25.7; 257; 25.7; 257; 257; 257];
 numTests = length(nValues);
 
 % Change me if you want to change the number of workers

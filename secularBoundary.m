@@ -24,11 +24,14 @@ end
 % Reference: SKIPPED in Trefethen & Bau's Numerical Linear Algebra Chapter 30
 % So I referenced instead https://people.inf.ethz.ch/arbenz/ewp/Lnotes/chapters5-6.pdf
 
+% Set a tolerance for which poles are considered to be identical
+% Future considerations: Make this more versatile
+poleTol = 10 * max(tol, n * eps * norm(d, inf));
+
 % Identify TOLERABLY UNIQUE poles of the "intended" secular function
 % Question: What tolerance should we even use???
 % [poles, ~, groupInd] = unique(d); % No tolerance
-poleTol = 10 * max(tol, n * eps * norm(d, inf));
-[poles, ~, groupInd] = uniquetol(d, poleTol, 'DataScale', 1); % Tolerance
+[poles, ~, groupInd] = uniquetol(d, poleTol, 'DataScale', 1);
 numPoles = length(poles); 
 
 % Count multiplicities by adding 1s according to the groupInds

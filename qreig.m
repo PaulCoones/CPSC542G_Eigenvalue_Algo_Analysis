@@ -12,7 +12,11 @@ function [lambda, itn] = qreig(A, tol, max_iter)
   end
 
   % First stage, bring to upper Hessenberg form
-  % A = houseeig(A); % NOT NEEDED FOR TriDiag Matrices
+  % IF it is not already in this form
+  if ~(isbanded(A, 1, size(A, 2)))
+     fprintf("\n For Shifted QR Iteration - Matrix is not yet in upper Hessenburg form, reducing...\n")
+     A = houseeig(A); 
+  end
   
 
   % Second stage: deflation loop
