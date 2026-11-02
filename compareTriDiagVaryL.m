@@ -31,15 +31,15 @@ fileName = ['compareTwoTriDiagVaryL_' datestr(now, 'yyyymmdd_HHMMSS') '.csv'];
 resultsFile = fullfile(outputDir, fileName);
 
 % Test parameters (ensure length(nValues) = length(LValues))
-LValues = (128 + 1) * 10.^(-3:3);    % L = 0.129 to 129000 (h = 1e-3 to 1e3)
-nValues = 128 * ones(size(LValues));  % Keep n fixed at 128 for every test
+LValues = (1024 + 1) * 10.^(-3:3);    % L = 0.129 to 129000 (h = 1e-3 to 1e3)
+nValues = 1024 * ones(size(LValues));  % Keep n fixed at 128 for every test
 
 % Caclulate how many (n, L) pair tests we have to compute
 numTests = length(nValues);
 
 % Initalize the two algorithms to compare with function handles
-algorithmX = @eigenJacobi;        % Algorithm X
-algorithmY = @eigenDivNConqNew;   % Algorithm Y
+algorithmX = @(A) qreig(A, 1e-5, 1000, 0)   % Algorithm X (absolute err)
+algorithmY = @(A) qreig(A, 1e-5, 1000, 1)   % Algorithm Y (relative err)
 
 % Activate the parallel pool before performing any computations in parallel
 if isempty(gcp('nocreate'))
