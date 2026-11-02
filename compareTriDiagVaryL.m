@@ -38,8 +38,8 @@ nValues = 1024 * ones(size(LValues));  % Keep n fixed at 128 for every test
 numTests = length(nValues);
 
 % Initalize the two algorithms to compare with function handles
-algorithmX = @(A) qreig(A, 1e-5, 1000, 0)   % Algorithm X (absolute err)
-algorithmY = @(A) qreig(A, 1e-5, 1000, 1)   % Algorithm Y (relative err)
+algorithmX = @(A) qreig(A, 1e-5, 1000, 0);   % Algorithm X (absolute err)
+algorithmY = @(A) qreig(A, 1e-5, 1000, 1);   % Algorithm Y (relative err)
 
 % Activate the parallel pool before performing any computations in parallel
 if isempty(gcp('nocreate'))
