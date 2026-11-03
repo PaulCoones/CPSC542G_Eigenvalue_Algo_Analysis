@@ -1,6 +1,6 @@
 %{
-    compareAll.m Is a program which compares all relevant
-    (eigenvalue) algorithms against one another on a permuted
+    compareAllPerturbedTriDiag.m Is a program which compares all relevant
+    (eigenvalue) algorithms against one another on a perturbed
     tridiagonal matrix, by comparing their execution times and 
     errors in their computed eigenvalues within a csv table.
 
@@ -26,13 +26,13 @@ end
 
 % Create a UNQIUE file name for the reuslts of this run according to the 
 % current year+day+hour+minute+second.
-fileName = ['directNaiveCompareAll_' datestr(now, 'yyyymmdd_HHMMSS') '.csv'];
+fileName = ['compareAllPerturbedTriDiag' datestr(now, 'yyyymmdd_HHMMSS') '.csv'];
 
 resultsFile = fullfile(outputDir, fileName);
 
 % Test parameters (ensure length(nValues) = length(LValues))
-nValues1 = 2.^(5:11);           % Test all six algorithms (n = 32 to 2048)
-nValues2 = [2.^(12:16), 70000]; % Test three algorithms (n = 4096 to 70000)
+nValues1 = 2.^(7);    % Test all six algorithms (n = 32 to 2048)
+nValues2 = [2.^(2)];  % Test three algorithms (n = 4096 to 70000)
 
 % Combine both sets of test parameters
 nValues = [nValues1, nValues2]; % All n values to test
@@ -46,8 +46,9 @@ algorithmDivNConq = @eigenDivNConqNew;   % Divide and Conquer
 algorithmTreeBi = @eigenTreeBisection;   % Tree Bisection
 algorithmParBi = @eigenParBisection;     % Naive Parallel Bisection
 algorithmNaiveBi = @eigenBisection;      % Naive Sequential Bisection
-algorithmQRIter = @stdQRIteration;       % QR Iteration
-algorithmShiftQRIter = @qreig;           % Shifted QR Iteration
+algorithmQRIter = @(A) stdQRIteration(A, 1e-8, 2500);   % QR Iteration
+algorithmShiftQRIter = @(A) qreig(A, 1e-8, 2500, 0);    % Shifted QR Iteration
+algorithmShiftQRIterRel = @(A) qreig(A, 1e-8, 2500, 1); % Shifted QR Iteration (Relative)
 algorithmJacobi = @eigenJacobi;          % Jacobi
 
 % Activate the parallel pool before performing any computations in parallel
@@ -74,7 +75,7 @@ for i = 1:numTests
     resultsRow = runBenchmark(n, L, ...
         algorithmDivNConq, algorithmTreeBi, algorithmParBi, ...
         algorithmNaiveBi, algorithmQRIter, algorithmShiftQRIter, ...
-        algorithmJacobi);
+        algorithmShiftQRIterRel, algorithmJacobi);
 
     % Create the CSV file for the first completed test
     if i == 1
@@ -105,7 +106,7 @@ fprintf('All results saved to: \n %s \n', resultsFile);
 function CSVresultsRow = runBenchmark(n, L, ...
     algorithmDivNConq, algorithmTreeBi, algorithmParBi, ...
     algorithmNaiveBi, algorithmQRIter, algorithmShiftQRIter, ...
-    algorithmJacobi)
+    algorithmShiftQRIterRel, algorithmJacobi)
 
     % Initialize all errors for the current test
     errorDivNConq = 0;
@@ -114,6 +115,7 @@ function CSVresultsRow = runBenchmark(n, L, ...
     errorNaiveBi = 0;
     errorQRIter = 0;
     errorShiftQRIter = 0;
+    errorShiftQRIterRel = 0;
     errorJacobi = 0;
 
     % Initialize all timings for the current test
@@ -123,17 +125,19 @@ function CSVresultsRow = runBenchmark(n, L, ...
     timeNaiveBi = 0;
     timeQRIter = 0;
     timeShiftQRIter = 0;
+    timeShiftQRIterRel = 0;
     timeJacobi = 0;
 
     % Construct the tridiagonal matrix
     Z = triDiag(n, L);
+    rng(7755);
     Z = Z + perturbTriDiag(Z);
 
-    % Compute all exact eigenvalues from the analytical solution
-    h = L/(n+1);
-    k = (1:n)';
-    lambdaExact = (4/h^2) * ...
-        sin(k*pi/(2*(n+1))).^2;
+    % Compute reference eigenvalues using MATLAB's eig solver
+    lambdaExact = sort(eig(Z));
+
+    % Compute the minimum spectral gap of the modified matrix
+    minSpectralGap = min(diff(lambdaExact));
 
     % Compute approximate eigenvalues using Divide and Conquer
     [lambdaDivNConq, timeDivNConq] = timeAlgorithm(algorithmDivNConq, Z, n);
@@ -182,6 +186,14 @@ function CSVresultsRow = runBenchmark(n, L, ...
         clear lambdaShiftQRIter;
 
 
+        % Compute approximate eigenvalues using Shifted QR Iteration (Relative)
+        [lambdaShiftQRIterRel, timeShiftQRIterRel] = timeAlgorithm( ...
+                                            algorithmShiftQRIterRel, Z, n);
+        lambdaShiftQRIterRel = sort(lambdaShiftQRIterRel(:));
+        errorShiftQRIterRel = norm(lambdaExact - lambdaShiftQRIterRel, 2);
+        clear lambdaShiftQRIterRel;
+
+
         % Compute approximate eigenvalues using Jacobi
         [lambdaJacobi, timeJacobi] = timeAlgorithm(algorithmJacobi, Z, n);
         lambdaJacobi = sort(lambdaJacobi(:));
@@ -191,21 +203,25 @@ function CSVresultsRow = runBenchmark(n, L, ...
 
     % Tabulate the results for the currents test
     CSVresultsRow = table( ...
-        n, L, errorNaiveBi, errorParBi, errorTreeBi, ...
-        errorQRIter, errorShiftQRIter, errorJacobi, errorDivNConq, ...
+        n, L, minSpectralGap, errorNaiveBi, errorParBi, errorTreeBi, ...
+        errorQRIter, errorShiftQRIter, errorShiftQRIterRel, ...
+        errorJacobi, errorDivNConq, ...
         timeNaiveBi, timeParBi, timeTreeBi, ...
-        timeQRIter, timeShiftQRIter, timeJacobi, timeDivNConq, ...
+        timeQRIter, timeShiftQRIter, timeShiftQRIterRel, ...
+        timeJacobi, timeDivNConq, ...
         'VariableNames', ...
-        {'n', 'L', 'Error2Norm_NaiveBisect', 'Error2Norm_ParBisect', ...
+        {'n', 'L', 'MinSpectralGap', ...
+         'Error2Norm_NaiveBisect', 'Error2Norm_ParBisect', ...
          'Error2Norm_TreeBisect', 'Error2Norm_QRIter', ...
-         'Error2Norm_ShiftQRIter', 'Error2Norm_Jacobi', ...
-         'Error2Norm_DivNConq', ...
+         'Error2Norm_ShiftQRIter', 'Error2Norm_ShiftQRIterRel', ...
+         'Error2Norm_Jacobi', 'Error2Norm_DivNConq', ...
          'Time_NaiveBisect(in s)', 'Time_ParBisect(in s)', ...
          'Time_TreeBisect(in s)', 'Time_QRIter(in s)', ...
-         'Time_ShiftQRIter(in s)', 'Time_Jacobi(in s)', 'Time_DivNConq(in s)'});
+         'Time_ShiftQRIter(in s)', 'Time_ShiftQRIterRel(in s)', ...
+         'Time_Jacobi(in s)', 'Time_DivNConq(in s)'});
 
     % Clear intermediate vars for more space
-    clear Z lambdaExact k h;
+    clear Z lambdaExact minSpectralGap k h;
 
 end
 
