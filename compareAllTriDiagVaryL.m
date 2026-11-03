@@ -42,8 +42,8 @@ algorithmDivNConq = @eigenDivNConqNew;   % Divide and Conquer
 algorithmTreeBi = @eigenTreeBisection;   % Tree Bisection
 algorithmParBi = @eigenParBisection;     % Naive Parallel Bisection
 algorithmNaiveBi = @eigenBisection;      % Naive Sequential Bisection
-algorithmQRIter = @stdQRIteration;       % QR Iteration
-algorithmShiftQRIter = @(A) qreig(A, 1e-8, 2500, 0); % Shifted QR Iteration
+algorithmQRIter = @(A) stdQRIteration(A, 1e-8);         % QR Iteration
+algorithmShiftQRIter = @(A) qreig(A, 1e-8, 2500, 0);    % Shifted QR Iteration
 algorithmShiftQRIterRel = @(A) qreig(A, 1e-8, 2500, 1); % Shifted QR Iteration w/ rel tol 
 algorithmJacobi = @eigenJacobi;          % Jacobi
 
