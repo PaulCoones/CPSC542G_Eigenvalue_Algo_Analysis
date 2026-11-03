@@ -7,6 +7,7 @@ function deltaA = perturbTriDiag(A)
 % Initalizations
 n = size(A, 1);
 normA = norm(A, 2);
+rng(725911);
 deltaA = rand(n);
 
 % Extract tridiagonal entries only

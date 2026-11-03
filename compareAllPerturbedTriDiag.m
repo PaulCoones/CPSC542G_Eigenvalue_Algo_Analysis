@@ -31,7 +31,7 @@ fileName = ['compareAllPerturbedTriDiag' datestr(now, 'yyyymmdd_HHMMSS') '.csv']
 resultsFile = fullfile(outputDir, fileName);
 
 % Test parameters (ensure length(nValues) = length(LValues))
-nValues1 = 2.^(7);    % Test all six algorithms (n = 32 to 2048)
+nValues1 = 2.^(7);           % Test all six algorithms (n = 32 to 2048)
 nValues2 = [2.^(2)];  % Test three algorithms (n = 4096 to 70000)
 
 % Combine both sets of test parameters
