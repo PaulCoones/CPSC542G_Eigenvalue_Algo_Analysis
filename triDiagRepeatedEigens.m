@@ -1,16 +1,15 @@
 % x = triDiagRepeatedEigens(n, interval_size, L) Returns a symmetric matrix
-% similar to the finite differenced laplacian returned by triDiag(), with
-% zeros added at each interval point to fix temperature. Essentially
-% subdivides the original heat rod problem into multiple sub-intervals so
-% that eigenvalues repeat.
-%
+% similar to the discretized laplacian returned by triDiag(), with
+% zeros added at each chosen interval point to fix the temperature to zero.
+% Ultimately, this subdivides the original problem into multiple 
+% sub-intervals on which eigenvalues repeat.
 % Inputs:
 %   - n : the number of points in each interval
 %   - interval_count: number of intervals, defines the number of times eigenvalues repeat. 
 %   - L: length of each interval
 % Outputs:
-%   - (n*interval_size x n*interval_size) symmetric matrix similar in 
-%     structure to triDiag() but with 0's at each interval point. 
+%   - A symmetric matrix of size (n*interval_size x n*interval_size) 
+%     similar in  structure to triDiag() but with 0's at each interval point. 
 function [Z, lambdaExact] = triDiagRepeatedEigens(n, interval_count, L)
     N = n * interval_count;
     h = L / (n + 1);
@@ -29,6 +28,7 @@ function [Z, lambdaExact] = triDiagRepeatedEigens(n, interval_count, L)
     % Exact eigenvalues of one segment
     k = (1:n)';
     lam1 = (4 / h^2) * sin(k * pi / (2 * (n + 1))).^2;
+
     % Repeat for each interval
     lambdaExact = sort(repmat(lam1, interval_size, 1));
 end
