@@ -5,7 +5,7 @@
 
 
 
-function D = eigenJacobi(A, max_sweeps, tol)
+function D = eigenJacobi(A, max_sweeps, tol, rel_tol)
 % x = eigenJacobi(A) Returns the eigenvalues of A in increasing order
 % utilizing the Jacobi eigenvalue method. Starting from the original matrix
 % A we sequentially transform the rows and columns of A using Jacobi
@@ -27,16 +27,23 @@ arguments
     A 
     max_sweeps=100
     tol=1e-5
+    rel_tol=0 
 end
 
 n = size(A, 1);
+
+A_norm = 1; 
+if rel_tol
+    A_norm = norm(A, "fro");
+end
 
 % Mentioned in TB Chapter 30. To avoid an O(n^2) search, we iterate
 % over sweeps of the the off-diag elements.
 for kt=1:max_sweeps
     % Check if A is diagonal and stop if it is
     off = norm(A - diag(diag(A)), "fro");
-    if (off < tol)
+
+    if (off < tol*A_norm)
         break;
     end
     for j=1:n-1

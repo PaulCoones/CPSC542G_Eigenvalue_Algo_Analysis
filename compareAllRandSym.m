@@ -26,13 +26,13 @@ end
 
 % Create a UNQIUE file name for the reuslts of this run according to the 
 % current year+day+hour+minute+second.
-fileName = ['directNaiveCompareAll_' datestr(now, 'yyyymmdd_HHMMSS') '.csv'];
+fileName = ['finalLARGENCompareAllRandSym_' datestr(now, 'yyyymmdd_HHMMSS') '.csv'];
 
 resultsFile = fullfile(outputDir, fileName);
 
 % Test parameters
-nValues1 = 2.^(5:11);           % Test all seven algorithms (n = 32 to 2048)
-nValues2 = [2.^(12:16), 70000]; % Test three algorithms (n = 4096 to 70000)
+nValues1 = 2.^(2);           % Test all seven algorithms (n = 32 to 2048)
+nValues2 = 2.^(11:16); % Test three algorithms (n = 4096 to 65536)
 
 % Combine both sets of test parameters
 nValues = [nValues1, nValues2]; % All n values to test
@@ -45,8 +45,9 @@ algorithmDivNConq = @eigenDivNConqNew;   % Divide and Conquer
 algorithmTreeBi = @eigenTreeBisection;   % Tree Bisection
 algorithmParBi = @eigenParBisection;     % Naive Parallel Bisection
 algorithmNaiveBi = @eigenBisection;      % Naive Sequential Bisection
-algorithmQRIter = @stdQRIteration;       % QR Iteration
-algorithmShiftQRIter = @qreig;           % Shifted QR Iteration
+algorithmQRIter = @(A) stdQRIteration(A, 1e-8, 2500);       % QR Iteration
+algorithmShiftQRIter = @(A) qreig(A, 1e-8, 2500, 0); % Shifted QR Iteration
+algorithmShiftQRIterRel = @(A) qreig(A, 1e-8, 2500, 1); % Shifted QR Iteration w/ rel tol 
 algorithmJacobi = @eigenJacobi;          % Jacobi
 
 % Activate the parallel pool before performing any computations in parallel
@@ -72,7 +73,7 @@ for i = 1:numTests
     resultsRow = runBenchmark(n, ...
         algorithmDivNConq, algorithmTreeBi, algorithmParBi, ...
         algorithmNaiveBi, algorithmQRIter, algorithmShiftQRIter, ...
-        algorithmJacobi);
+        algorithmShiftQRIterRel, algorithmJacobi);
 
     % Create the CSV file for the first completed test
     if i == 1
@@ -101,7 +102,7 @@ fprintf('All results saved to: \n %s \n', resultsFile);
 
 function CSVresultsRow = runBenchmark(n, algorithmDivNConq, algorithmTreeBi, ...
     algorithmParBi, algorithmNaiveBi, algorithmQRIter, algorithmShiftQRIter, ...
-    algorithmJacobi)
+    algorithmShiftQRIterRel, algorithmJacobi)
 
     % Initialize all errors for the current test
     errorDivNConq = 0;
@@ -110,6 +111,7 @@ function CSVresultsRow = runBenchmark(n, algorithmDivNConq, algorithmTreeBi, ...
     errorNaiveBi = 0;
     errorQRIter = 0;
     errorShiftQRIter = 0;
+    errorShiftQRIterRel = 0;
     errorJacobi = 0;
 
     % Initialize all timings for the current test
@@ -119,6 +121,7 @@ function CSVresultsRow = runBenchmark(n, algorithmDivNConq, algorithmTreeBi, ...
     timeNaiveBi = 0;
     timeQRIter = 0;
     timeShiftQRIter = 0;
+    timeShiftQRIterRel = 0;
     timeJacobi = 0;
 
     % Construct the random symmetric matrix
@@ -129,6 +132,12 @@ function CSVresultsRow = runBenchmark(n, algorithmDivNConq, algorithmTreeBi, ...
 
     % Compute all reference eigenvalues using MATLAB eig
     lambdaExact = sort(eig(Z));
+
+    % Compute the minimum spectral gap from the reference eigenvalues
+    minSpectralGap = min(diff(lambdaExact));
+
+    % 2-norm of the reference eigenvalues (used for the relative errors)
+    normExact = norm(lambdaExact, 2);
 
     % Compute the symmetric tridiagonal matrix using MATLABs hess
     [T, timeTridiagonalize] = timeAlgorithm(@hess, Z, n);
@@ -158,7 +167,7 @@ function CSVresultsRow = runBenchmark(n, algorithmDivNConq, algorithmTreeBi, ...
     clear lambdaParBi;
 
     % Test all seven algorithms for n = 32 to 2048
-    if n <= 2048
+    if n <= 256
         % Compute approximate eigenvalues using Naive Sequential Bisection
         [lambdaNaiveBi, timeNaiveBi] = timeAlgorithm(algorithmNaiveBi, T, n);
         timeNaiveBi = timeNaiveBi + timeTridiagonalize;
@@ -181,6 +190,14 @@ function CSVresultsRow = runBenchmark(n, algorithmDivNConq, algorithmTreeBi, ...
         errorShiftQRIter = norm(lambdaExact - lambdaShiftQRIter, 2);
         clear lambdaShiftQRIter;
 
+        % Compute approximate eigenvalues using Shifted QR Iteration w/ rel tol
+        [lambdaShiftQRIterRel, timeShiftQRIterRel] = timeAlgorithm( ...
+                                            algorithmShiftQRIterRel, T, n);
+        timeShiftQRIterRel = timeShiftQRIterRel + timeTridiagonalize;
+        lambdaShiftQRIterRel = sort(lambdaShiftQRIterRel(:));
+        errorShiftQRIterRel = norm(lambdaExact - lambdaShiftQRIterRel, 2);
+        clear lambdaShiftQRIterRel;
+
         % Compute approximate eigenvalues using Jacobi
         [lambdaJacobi, timeJacobi] = timeAlgorithm(algorithmJacobi, Z, n);
         lambdaJacobi = sort(lambdaJacobi(:));
@@ -190,30 +207,37 @@ function CSVresultsRow = runBenchmark(n, algorithmDivNConq, algorithmTreeBi, ...
 
     % Tabulate the results for the currents test
     CSVresultsRow = table( ...
-        n, errorNaiveBi, errorParBi, errorTreeBi, ...
-        errorQRIter, errorShiftQRIter, errorJacobi, errorDivNConq, ...
+        n, minSpectralGap, errorNaiveBi, errorParBi, errorTreeBi, ...
+        errorQRIter, errorShiftQRIter, errorShiftQRIterRel, errorJacobi, errorDivNConq, ...
+        errorNaiveBi/normExact, errorParBi/normExact, errorTreeBi/normExact, ...
+        errorQRIter/normExact, errorShiftQRIter/normExact, ...
+        errorShiftQRIterRel/normExact, errorJacobi/normExact, errorDivNConq/normExact, ...
         timeNaiveBi, timeParBi, timeTreeBi, ...
-        timeQRIter, timeShiftQRIter, timeJacobi, timeDivNConq, ...
+        timeQRIter, timeShiftQRIter, timeShiftQRIterRel, timeJacobi, timeDivNConq, ...
         'VariableNames', ...
-        {'n', 'Error2Norm_NaiveBisect', 'Error2Norm_ParBisect', ...
-         'Error2Norm_TreeBisect', 'Error2Norm_QRIter', ...
-         'Error2Norm_ShiftQRIter', 'Error2Norm_Jacobi', ...
-         'Error2Norm_DivNConq', ...
+        {'n', 'MinSpectralGap', 'AbsError2Norm_NaiveBisect', 'AbsError2Norm_ParBisect', ...
+         'AbsError2Norm_TreeBisect', 'AbsError2Norm_QRIter', ...
+         'AbsError2Norm_ShiftQRIter', 'AbsError2Norm_ShiftQRIterRel', 'AbsError2Norm_Jacobi', ...
+         'AbsError2Norm_DivNConq', ...
+         'RelError2Norm_NaiveBisect', 'RelError2Norm_ParBisect', ...
+         'RelError2Norm_TreeBisect', 'RelError2Norm_QRIter', ...
+         'RelError2Norm_ShiftQRIter', 'RelError2Norm_ShiftQRIterRel', 'RelError2Norm_Jacobi', ...
+         'RelError2Norm_DivNConq', ...
          'Time_NaiveBisect(in s)', 'Time_ParBisect(in s)', ...
          'Time_TreeBisect(in s)', 'Time_QRIter(in s)', ...
-         'Time_ShiftQRIter(in s)', 'Time_Jacobi(in s)', 'Time_DivNConq(in s)'});
+         'Time_ShiftQRIter(in s)', 'Time_ShiftQRIterRel(in s)', 'Time_Jacobi(in s)', 'Time_DivNConq(in s)'});
 
     % Clear intermediate vars for more space
-    clear A Z T lambdaExact timeTridiagonalize;
+    clear A Z T lambdaExact timeTridiagonalize normExact;
 
 end
 
 
 function [eigens, measuredTime] = timeAlgorithm(algorithm, Z, n)
-    if n < 4096 % Use timeit for n < 4096 since runtimes are relatively small
+    if n <= 256 % Use timeit for n <=256 since runtimes are relatively small
         measuredTime = timeit(@() algorithm(Z));
         eigens = algorithm(Z);
-    else % Use tic/toc for n >= 4096 since runtimes become large
+    else % Use tic/toc for n >= 256 since runtimes become large
         tic;
         eigens = algorithm(Z);
         measuredTime = toc;

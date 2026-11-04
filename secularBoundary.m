@@ -10,8 +10,8 @@ n = length(D);
 
 % Ensure we need to actually do work
 if beta == 0
-    warning("Vanishing rank-1 correction, eigenvalues " + ...
-        "already in the diagonal entries.")
+    % warning("Vanishing rank-1 correction, eigenvalues " + ...
+    %     "already in the diagonal entries.")
 
     % Return eigenvalues and boundary rows in increasing order
     [roots, newOrdering] = sort(d);

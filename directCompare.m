@@ -13,8 +13,8 @@ clearvars;
 close all;
 
 % Test parameters (ensure length(nValues) = length(LValues)
-nValues = [32; 64; 64; 64; 64; 128; 256; 512]; % Add n tests here
-LValues = [33; 0.01; 1; 65; 129; 129; 257; 513];      % Add corresponding L values here
+nValues = [32; 64; 64; 64; 64; 128; 256]; % Add n tests here
+LValues = [33; 0.01; 1; 65; 129; 129; 257];      % Add corresponding L values here
 % For Bisection, if nValue = n, LValue = n+1 enables error convergence
 % with certainty. As otherwise, values in the triDiag matrix grow
 % without bound with increasing n.
@@ -23,8 +23,8 @@ LValues = [33; 0.01; 1; 65; 129; 129; 257; 513];      % Add corresponding L valu
 numTests = length(nValues);
 
 % Initalize the two algorithms to compare
-algorithmX = @stdQRIteration; % Change X to, for example, eigenParBisection or other
-algorithmY = @eigenJacobi;    % Change Y to, for example, eigenTreeBisection or other
+algorithmX = @(A) eigenJacobi(A, 100, 1e-5, 1); % Change X to, for example, eigenParBisection or other
+algorithmY = @(A) eigenJacobi(A, 100, 1e-5, 0);    % Change Y to, for example, eigenTreeBisection or other
 
 % Initialize errors
 errorX = zeros(numTests, 1);
@@ -55,14 +55,15 @@ for i = 1:numTests
         sin(k*pi/(2*(n+1))).^2;
 
     % Compute approximate eigenvalues using Algorithm X
-    tic;
+    %tic;
     lambdaX = algorithmX(Z);
-    timeX(i) = toc;
+    [lambdaX, xTime] = timeAlgorithm(algorithmX, Z, )
+    %timeX(i) = toc;
 
     % Compute approximate eigenvalues using Algorithm Y
-    tic;
+    %tic;
     lambdaY = algorithmY(Z);
-    timeY(i) = toc;
+    %timeY(i) = toc;
 
     % Incase eigenvalues not sorted, sort eigenvalues in ascending order
     % I.e. Jacobi does not sort them.
@@ -99,3 +100,14 @@ format short e
 
 % Display the table
 disp(results);
+
+function [eigens, measuredTime] = timeAlgorithm(algorithm, Z, n)
+if n < 4096 % Use timeit for n < 4096 since runtimes are relatively small
+    measuredTime = timeit(@() algorithm(Z));
+    eigens = algorithm(Z);
+else % Use tic/toc for n >= 4096 since runtimes become large
+    tic;
+    eigens = algorithm(Z);
+    measuredTime = toc;
+end
+end
