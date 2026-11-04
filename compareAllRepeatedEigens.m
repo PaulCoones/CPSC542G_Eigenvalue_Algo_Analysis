@@ -1,0 +1,229 @@
+%{
+    compareAllRepeatedEigens.m Is a program which compares ALL relevant
+    (eigenvalue) algorithms against one another, by comparing their
+    execution times and errors in their computed eigenvalues on a
+    1D Laplacian matrix with repeated eigenvalues (through fixed
+    solution points set to zero) within a csv table.
+
+    Hit run to run the program and save the results to a CSV table.
+    Change the Test parameters and/or algorithm parameters to compare
+    different eigenvalue multiplicities and/or algorithms.
+
+    Results are saved after every completed test.
+    Local variables cleared at each iteration to save space.
+%}
+
+% Clean workspace
+clearvars;
+close all;
+
+% Save benchmark results in a subfolder of the current directory
+outputDir = fullfile(pwd, 'TabulatedBenchMarks');
+
+% Create this directory if it doesnt yet exist
+if ~exist(outputDir, 'dir')
+    mkdir(outputDir);
+end
+
+% Create a UNQIUE file name for the reuslts of this run according to the
+% current year+day+hour+minute+second.
+fileName = ['FinalRepeatedEigenvalueTest_' datestr(now, 'yyyymmdd_HHMMSS') '.csv'];
+
+resultsFile = fullfile(outputDir, fileName);
+
+% Test parameters (ensure n is divisible by every interval_count)
+n = 1024;                   % Fix the total matrix dimension
+intervalCounts = 2.^(0:7);  % Test eigenvalue multiplicities 1, 2, 4, ..., 128
+
+% Caclulate how many multiplicity tests we have to compute
+numTests = length(intervalCounts);
+
+% Initalize the eight algorithms to compare with anonymous functions
+algorithmDivNConq = @eigenDivNConqNew;   % Divide and Conquer
+algorithmTreeBi = @eigenTreeBisection;   % Tree Bisection
+algorithmParBi = @eigenParBisection;     % Naive Parallel Bisection
+algorithmNaiveBi = @eigenBisection;      % Naive Sequential Bisection
+algorithmQRIter = @(A) stdQRIteration(A, 1e-8, 2500);   % QR Iteration
+algorithmShiftQRIter = @(A) qreig(A, 1e-8, 2500, 0);    % Shifted QR Iteration (Abs.)
+algorithmShiftQRIterRel = @(A) qreig(A, 1e-8, 2500, 1); % Shifted QR Iteration (Rel.)
+algorithmJacobi = @eigenJacobi;          % Jacobi
+
+% Activate the parallel pool before performing any computations in parallel
+if isempty(gcp('nocreate'))
+    %parpool('Processes', 8); % Use cores
+    parpool('Threads', 8);   % Use threads
+end
+
+fprintf('\nSaving the results to:\n %s \n', resultsFile);
+
+% Benchmark and save results after every completed test
+for i = 1:numTests
+
+    % Iterate over all testing multiplicities
+    interval_count = intervalCounts(i);
+    assert(mod(n, interval_count) == 0, ...
+        'The eigenvalue multiplicity must divide the matrix dimension.');
+    blockN = n / interval_count;
+    L = blockN + 1; % Set h = L/(blockN+1) = 1 to normalize all tests
+
+    % Display progress of current test
+    fprintf('\nRunning test %d of %d: n = %d, interval_count = %d, L = %.2f\n', ...
+        i, numTests, n, interval_count, L);
+
+    % Perform the benchmark in a separate function so that its
+    % large matrices and intermediate variables are released afterward
+    resultsRow = runBenchmark(n, interval_count, L, ...
+        algorithmDivNConq, algorithmTreeBi, algorithmParBi, ...
+        algorithmNaiveBi, algorithmQRIter, algorithmShiftQRIter, ...
+        algorithmShiftQRIterRel, algorithmJacobi);
+
+    % Create the CSV file for the first completed test
+    if i == 1
+        writetable(resultsRow, resultsFile);
+    else
+        % Add the completed test as a new row in the existing table
+        writetable(resultsRow, resultsFile, 'WriteMode', 'append', ...
+                   'WriteVariableNames', false);
+    end
+
+    % Confirmation that the current iteration results have been saved
+    fprintf('Test %d of %d completed and saved successfully.\n', ...
+        i, numTests);
+
+    % Clear memory
+    clear resultsRow;
+
+end
+
+% % Delete the parallel pool finishing all parallel executions
+delete(gcp('nocreate'));
+
+fprintf('\n All %d tests completed. \n', numTests);
+fprintf('All results saved to: \n %s \n', resultsFile);
+
+
+
+function CSVresultsRow = runBenchmark(n, interval_count, L, ...
+    algorithmDivNConq, algorithmTreeBi, algorithmParBi, ...
+    algorithmNaiveBi, algorithmQRIter, algorithmShiftQRIter, ...
+    algorithmShiftQRIterRel, algorithmJacobi)
+
+    % Initialize all errors for the current test
+    errorDivNConq = 0;
+    errorTreeBi = 0;
+    errorParBi = 0;
+    errorNaiveBi = 0;
+    errorQRIter = 0;
+    errorShiftQRIter = 0;
+    errorShiftQRIterRel = 0;
+    errorJacobi = 0;
+
+    % Initialize all timings for the current test
+    timeDivNConq = 0;
+    timeTreeBi = 0;
+    timeParBi = 0;
+    timeNaiveBi = 0;
+    timeQRIter = 0;
+    timeShiftQRIter = 0;
+    timeShiftQRIterRel = 0;
+    timeJacobi = 0;
+
+    % Construct the tridiagonal matrix
+    blockN = n / interval_count;
+    [Z, lambdaExact] = triDiagRepeatedEigens(blockN, interval_count, L);
+
+    % Compute the minimum spectral gap between distinct eigenvalues
+    distinctLambdas = unique(lambdaExact);
+    minDistinctSpectralGap = min(diff(distinctLambdas));
+
+    % Compute approximate eigenvalues using Divide and Conquer
+    [lambdaDivNConq, timeDivNConq] = timeAlgorithm(algorithmDivNConq, Z);
+
+    % Incase eigenvalues not sorted, sort eigenvalues in ascending order
+    lambdaDivNConq = sort(lambdaDivNConq(:));
+    errorDivNConq = norm(lambdaExact - lambdaDivNConq, 2);
+    clear lambdaDivNConq; % Clear memory
+
+
+    % Compute approximate eigenvalues using Tree Bisection
+    [lambdaTreeBi, timeTreeBi] = timeAlgorithm(algorithmTreeBi, Z);
+    lambdaTreeBi = sort(lambdaTreeBi(:));
+    errorTreeBi = norm(lambdaExact - lambdaTreeBi, 2);
+    clear lambdaTreeBi;
+
+
+    % Compute approximate eigenvalues using Naive Parallel Bisection
+    [lambdaParBi, timeParBi] = timeAlgorithm(algorithmParBi, Z);
+    lambdaParBi = sort(lambdaParBi(:));
+    errorParBi = norm(lambdaExact - lambdaParBi, 2);
+    clear lambdaParBi;
+
+
+    % Compute approximate eigenvalues using Naive Sequential Bisection
+    [lambdaNaiveBi, timeNaiveBi] = timeAlgorithm(algorithmNaiveBi, Z);
+    lambdaNaiveBi = sort(lambdaNaiveBi(:));
+    errorNaiveBi = norm(lambdaExact - lambdaNaiveBi, 2);
+    clear lambdaNaiveBi;
+
+
+    % Compute approximate eigenvalues using QR Iteration
+    [lambdaQRIter, timeQRIter] = timeAlgorithm(algorithmQRIter, Z);
+    lambdaQRIter = sort(lambdaQRIter(:));
+    errorQRIter = norm(lambdaExact - lambdaQRIter, 2);
+    clear lambdaQRIter;
+
+
+    % Compute approximate eigenvalues using Shifted QR Iteration
+    [lambdaShiftQRIter, timeShiftQRIter] = timeAlgorithm( ...
+                                        algorithmShiftQRIter, Z);
+    lambdaShiftQRIter = sort(lambdaShiftQRIter(:));
+    errorShiftQRIter = norm(lambdaExact - lambdaShiftQRIter, 2);
+    clear lambdaShiftQRIter;
+
+
+    % Compute approximate eigenvalues using Shifted QR Iteration (Relative)
+    [lambdaShiftQRIterRel, timeShiftQRIterRel] = timeAlgorithm( ...
+                                        algorithmShiftQRIterRel, Z);
+    lambdaShiftQRIterRel = sort(lambdaShiftQRIterRel(:));
+    errorShiftQRIterRel = norm(lambdaExact - lambdaShiftQRIterRel, 2);
+    clear lambdaShiftQRIterRel;
+
+
+    % Compute approximate eigenvalues using Jacobi
+    [lambdaJacobi, timeJacobi] = timeAlgorithm(algorithmJacobi, Z);
+    lambdaJacobi = sort(lambdaJacobi(:));
+    errorJacobi = norm(lambdaExact - lambdaJacobi, 2);
+    clear lambdaJacobi;
+
+    % Tabulate the results for the currents test
+    CSVresultsRow = table( ...
+        n, interval_count, blockN, L, minDistinctSpectralGap, ...
+        errorNaiveBi, errorParBi, errorTreeBi, ...
+        errorQRIter, errorShiftQRIter, errorShiftQRIterRel, ...
+        errorJacobi, errorDivNConq, ...
+        timeNaiveBi, timeParBi, timeTreeBi, ...
+        timeQRIter, timeShiftQRIter, timeShiftQRIterRel, ...
+        timeJacobi, timeDivNConq, ...
+        'VariableNames', ...
+        {'n', 'EigenvalueMultiplicity', 'BlockSize', 'L', ...
+         'MinDistinctSpectralGap', ...
+         'Error2Norm_NaiveBisect', 'Error2Norm_ParBisect', ...
+         'Error2Norm_TreeBisect', 'Error2Norm_QRIter', ...
+         'Error2Norm_ShiftQRIter', 'Error2Norm_ShiftQRIterRel', ...
+         'Error2Norm_Jacobi', 'Error2Norm_DivNConq', ...
+         'Time_NaiveBisect(in s)', 'Time_ParBisect(in s)', ...
+         'Time_TreeBisect(in s)', 'Time_QRIter(in s)', ...
+         'Time_ShiftQRIter(in s)', 'Time_ShiftQRIterRel(in s)', ...
+         'Time_Jacobi(in s)', 'Time_DivNConq(in s)'});
+
+    % Clear intermediate vars for more space
+    clear Z lambdaExact distinctLambdas blockN;
+
+end
+
+
+function [eigens, measuredTime] = timeAlgorithm(algorithm, Z)
+    tic;
+    eigens = algorithm(Z);
+    measuredTime = toc;
+end
