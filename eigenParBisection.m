@@ -10,10 +10,10 @@ function x = eigenParBisection(A, tol)
 %   until an interval length tolerance tol is reached.
 %   This implementation is parallelized and naive, as for each eigenvalue,
 %   we restart from the largest possible interval in which the eigenvalue
-%   may be contained, however we can do better, see eigenTreeBisection.m
-% Requires: A is a symmetric tridiagonal square nxn matrix with n >= 1
+%   may be contained, however we can possibly do better, see eigenTreeBisection.m
+% Requires: A is a real symmetric tridiagonal square nxn matrix with n >= 1
 %           A is irreducible s.t. all its off-diagonal entries are nonzero
-%           tol is a finite positive number and ideally made small
+%           tol is a real and finite positive number, ideally made small
 % Time Complexity: O(n^2/p * log_2(U - L / tol))
 %                  Where n is number of rows/cols in the matrix A
 %                  p is the number of workers

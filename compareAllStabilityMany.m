@@ -27,7 +27,7 @@ end
 
 % Create a UNQIUE file name for the reuslts of this run according to the 
 % current year+day+hour+minute+second.
-fileName = ['MassiveStabilityTests_' datestr(now, 'yyyymmdd_HHMMSS') '.csv'];
+fileName = ['FinalMassiveStabilityTest_' datestr(now, 'yyyymmdd_HHMMSS') '.csv'];
 
 resultsFile = fullfile(outputDir, fileName);
 
