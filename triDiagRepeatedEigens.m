@@ -8,9 +8,10 @@
 %   - interval_count: number of intervals, defines the number of times eigenvalues repeat. 
 %   - L: length of each interval
 % Outputs:
-%   - A symmetric matrix of size (n*interval_size x n*interval_size) 
-%     similar in  structure to triDiag() but with 0's at each interval point. 
-function [Z, lambdaExact] = triDiagRepeatedEigens(n, interval_count, L)
+%   - Z: A symmetric matrix of size (n*interval_size x n*interval_size) 
+%     similar in  structure to triDiag() but with 0's at each interval point
+%   - repeatedLambdas: The exact eigenvalues of the matrix Z
+function [Z, repeatedLambdas] = triDiagRepeatedEigens(n, interval_count, L)
     N = n * interval_count;
     h = L / (n + 1);
 
@@ -27,8 +28,8 @@ function [Z, lambdaExact] = triDiagRepeatedEigens(n, interval_count, L)
 
     % Exact eigenvalues of one segment
     k = (1:n)';
-    lam1 = (4 / h^2) * sin(k * pi / (2 * (n + 1))).^2;
+    originalLambdas = (4 / h^2) * sin(k * pi / (2 * (n + 1))).^2;
 
     % Repeat for each interval
-    lambdaExact = sort(repmat(lam1, interval_size, 1));
+    repeatedLambdas = sort(repmat(originalLambdas, interval_size, 1));
 end
