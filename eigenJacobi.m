@@ -16,11 +16,13 @@ function D = eigenJacobi(A, max_sweeps, tol, rel_tol)
 %           max_sweeps is a non-zero positive integer that's ideally
 %           greater than 1
 %           tol is finite positive number that's ideally small
+%           if rel_tol=1 then tolerance is relative to scale of matrix
+%                        (tol = tol*norm(A, 'fro'))
 % Time Complexity: O(max_sweeps * n^3) 
 %           max_sweeps is the upper bound on the number of iterations
 %           in the algorithm.
 %           n is number of rows/columns in the matrix A
-% Example input: eigenJacobi([32,-16,0;-16,32,-16;0,-16,32], 10, 1e-10)
+% Example input: eigenJacobi([32,-16,0;-16,32,-16;0,-16,32], 10, 1e-10, 0)
 % Example output: [9.3726; 32.0000; 54.6274]
 
 arguments

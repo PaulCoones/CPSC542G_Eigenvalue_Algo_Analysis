@@ -16,8 +16,8 @@ function [lambda, first, last] = eigenDivNConqNew(A, tol, maxIters)
 %                  U and L are the upper and lower bounds on the
 %                  eigenvalues from Gershgorin's circle theorem
 %                  tol is the interval length tolerance
-% Example Input: ?? ADD ME ??
-% Example Output: ?? ADD ME ??
+% Example Input: eigenDivNConqNew([32,-16,0;-16,32,-16;0,-16,32], 1e-10, 100)
+% Example Output: [9.3726; 32.0000; 54.6274]
 
 arguments
     A
